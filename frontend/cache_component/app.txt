@@ -1,0 +1,347 @@
+// 'use client'
+// import Image from "next/image";
+// import { setAllowed } from "@stellar/freighter-api";
+
+
+// export default function Home() {
+
+//   const 
+//   return (
+//     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+//       <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
+        
+//         <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
+//           <button
+//             onClick={async () => await setAllowed()}
+//             className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
+//           >
+//             <Image
+//               className="dark:invert"
+//               src="/vercel.svg"
+//               alt="Vercel logomark"
+//               width={16}
+//               height={16}
+//             />
+//             {setAllowed ? "Connected" : "Connect"}
+//           </button>
+//           <button
+            
+//             className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]" target="_blank"
+//             onClick={() => window.open('https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app', '_blank')}
+//           >
+//             <Image
+//               className="dark:invert"
+//               src="/vercel.svg"
+//               alt="Vercel logomark"
+//               width={16}
+//               height={16}
+//             />
+//             Compile
+//           </button>
+//           <button
+            
+//             className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]" target="_blank"
+//             onClick={() => window.open('https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app', '_blank')}
+//           >
+//             <Image
+//               className="dark:invert"
+//               src="/vercel.svg"
+//               alt="Vercel logomark"
+//               width={16}
+//               height={16}
+//             />
+//             Deploy
+//           </button>
+//         </div>
+//       </main>
+//     </div>
+//   );
+// }
+
+'use client';
+
+import React, { useState, useEffect } from "react";
+import Image from "next/image";
+import { isConnected, setAllowed, getAddress, signTransaction } from "@stellar/freighter-api";
+import * as StellarSdk from "@stellar/stellar-sdk";
+import { io } from "socket.io-client";
+import { Buffer } from "buffer";
+
+// ==========================================
+// CONFIGURATION
+// ==========================================
+const API_URL = "http://localhost:3000"; // Your Docker Backend
+const TESTNET_RPC = "https://soroban-testnet.stellar.org";
+const NETWORK_PASSPHRASE = StellarSdk.Networks.TESTNET;
+
+// Hardcoded Sample Code (Same as your script)
+const RUST_CODE = `#![no_std]
+use soroban_sdk::{contract, contractimpl, symbol_short, vec, Env, Symbol, Vec};
+
+#[contract]
+pub struct Contract;
+
+#[contractimpl]
+impl Contract {
+    pub fn hello(env: Env, to: Symbol) -> Vec<Symbol> {
+        vec![&env, symbol_short!("Hello"), to]
+    }
+}
+`;
+
+export default function Home() {
+  // State
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [status, setStatus] = useState("Idle");
+  const [wasmHex, setWasmHex] = useState<string | null>(null);
+  const [contractId, setContractId] = useState<string | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
+
+  // Helper to append logs
+  const addLog = (msg: string) => setLogs(prev => [...prev, `> ${msg}`]);
+
+  // ==========================================
+  // 1. CONNECT WALLET
+  // ==========================================
+  const handleConnect = async () => {
+    try {
+      if (!(await isConnected())) {
+        alert("Please install Freighter!");
+        return;
+      }
+      await setAllowed();
+      const { address } = await getAddress();
+      setWalletAddress(address);
+      addLog(`Wallet Connected: ${address}`);
+    } catch (e: any) {
+      addLog(`Error connecting: ${e.message}`);
+    }
+  };
+
+  // ==========================================
+  // 2. COMPILE CODE (Socket.IO)
+  // ==========================================
+  const handleCompile = async () => {
+    setStatus("Compiling...");
+    setLogs([]); // Clear logs on new run
+    addLog(`Connecting to Backend: ${API_URL}...`);
+
+    const socket = io(API_URL);
+    const submissionId = "web-deploy-" + Date.now();
+
+    socket.on("connect", () => {
+      addLog("Socket Connected. Sending Code...");
+      socket.emit("compile", { code: RUST_CODE, submissionId });
+    });
+
+    socket.on("status", (data: any) => {
+      setStatus(data.state);
+      addLog(`Backend: ${data.state}`);
+    });
+
+    socket.on("result", (data: any) => {
+      if (data.success) {
+        addLog(`Compilation Success! WASM Size: ${data.wasmHex.length} chars`);
+        setWasmHex(data.wasmHex);
+        setStatus("Compiled");
+      } else {
+        addLog(`Compilation Failed: ${data.logs}`);
+        setStatus("Error");
+      }
+      socket.disconnect();
+    });
+  };
+
+  // ==========================================
+  // 3. DEPLOY (Upload + Instantiate)
+  // ==========================================
+  const handleDeploy = async () => {
+    if (!walletAddress || !wasmHex) {
+      alert("Connect Wallet and Compile Code first!");
+      return;
+    }
+
+    const server = new StellarSdk.rpc.Server(TESTNET_RPC);
+    setStatus("Deploying...");
+    
+    try {
+      // ----------------------------------------
+      // STEP A: UPLOAD WASM
+      // ----------------------------------------
+      addLog("Preparing Upload Transaction...");
+      const account = await server.getAccount(walletAddress);
+      const wasmBuffer = Buffer.from(wasmHex, 'hex');
+
+      const uploadOp = StellarSdk.Operation.uploadContractWasm({ wasm: wasmBuffer });
+      
+      const uploadTx = new StellarSdk.TransactionBuilder(account, {
+        fee: StellarSdk.BASE_FEE,
+        networkPassphrase: NETWORK_PASSPHRASE,
+      })
+        .addOperation(uploadOp)
+        .setTimeout(30)
+        .build();
+
+      // Simulate to get Resource Fee
+      const preparedUploadTx = await server.prepareTransaction(uploadTx);
+      
+      addLog("Please Sign Upload Transaction in Freighter...");
+      const signedUploadXdr = await signTransaction(preparedUploadTx.toXDR(), {
+        networkPassphrase: NETWORK_PASSPHRASE,
+      });
+
+      if (signedUploadXdr.error) throw new Error(signedUploadXdr.error);
+
+      addLog("Submitting Upload...");
+      const uploadResult = await server.sendTransaction(
+        StellarSdk.TransactionBuilder.fromXDR(signedUploadXdr.signedTxXdr, NETWORK_PASSPHRASE)
+      );
+
+      if (uploadResult.status !== "PENDING") throw new Error("Upload Failed");
+      
+      const uploadHash = uploadResult.hash;
+      addLog(`Upload Tx Hash: ${uploadHash}`);
+      
+      // Poll for Upload Confirmation
+      let uploadResponse = await server.getTransaction(uploadHash);
+      while (uploadResponse.status === "NOT_FOUND" || uploadResponse.status === "PENDING") {
+        await new Promise(r => setTimeout(r, 1000));
+        uploadResponse = await server.getTransaction(uploadHash);
+      }
+
+      if (uploadResponse.status !== "SUCCESS") throw new Error("Upload On-Chain Failed");
+
+      // Extract WASM Hash
+      // @ts-ignore
+      const wasmHash = uploadResponse.returnValue.bytes();
+      addLog("WASM Uploaded Successfully.");
+
+      // ----------------------------------------
+      // STEP B: INSTANTIATE CONTRACT
+      // ----------------------------------------
+      addLog("Preparing Instantiate Transaction...");
+      // Refresh account sequence
+      const account2 = await server.getAccount(walletAddress);
+
+      const createOp = StellarSdk.Operation.createCustomContract({
+        wasmHash: wasmHash,
+        address: StellarSdk.Address.fromString(walletAddress),
+        salt: Buffer.from(uploadHash, 'hex'), // Use previous hash as salt for uniqueness
+      });
+
+      const createTx = new StellarSdk.TransactionBuilder(account2, {
+        fee: StellarSdk.BASE_FEE,
+        networkPassphrase: NETWORK_PASSPHRASE,
+      })
+        .addOperation(createOp)
+        .setTimeout(30)
+        .build();
+
+      const preparedCreateTx = await server.prepareTransaction(createTx);
+
+      addLog("Please Sign Create Transaction in Freighter...");
+      const signedCreateXdr = await signTransaction(preparedCreateTx.toXDR(), {
+        networkPassphrase: NETWORK_PASSPHRASE,
+      });
+
+      if (signedCreateXdr.error) throw new Error(signedCreateXdr.error);
+
+      addLog("Submitting Creation...");
+      const createResult = await server.sendTransaction(
+        StellarSdk.TransactionBuilder.fromXDR(signedCreateXdr.signedTxXdr, NETWORK_PASSPHRASE)
+      );
+
+      const createHash = createResult.hash;
+      
+      // Poll for Create Confirmation
+      let createResponse = await server.getTransaction(createHash);
+      while (createResponse.status === "NOT_FOUND" || createResponse.status === "PENDING") {
+        await new Promise(r => setTimeout(r, 1000));
+        createResponse = await server.getTransaction(createHash);
+      }
+
+      if (createResponse.status !== "SUCCESS") throw new Error("Creation Failed");
+
+      // Extract Contract ID
+      // @ts-ignore
+      const addressBytes = createResponse.returnValue.address();
+      const newContractId = StellarSdk.StrKey.encodeContract(
+        StellarSdk.Address.fromScAddress(addressBytes).toBuffer()
+      );
+
+      setContractId(newContractId);
+      setStatus("Deployed!");
+      addLog(`🎉 SUCCESS! Contract ID: ${newContractId}`);
+
+    } catch (e: any) {
+      console.error(e);
+      setStatus("Error");
+      addLog(`Error: ${e.message}`);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black text-black dark:text-white">
+      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-start py-32 px-16 bg-white dark:bg-black sm:items-start gap-8">
+        
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-bold">Stellar Vide IDE</h1>
+          <p className="opacity-70">Status: {status}</p>
+        </div>
+
+        {/* Buttons Row */}
+        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row w-full">
+          
+          {/* BUTTON 1: CONNECT */}
+          <button
+            onClick={handleConnect}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-blue-600 px-5 text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+          >
+            {walletAddress ? "Connected" : "Connect Wallet"}
+          </button>
+
+          {/* BUTTON 2: COMPILE */}
+          <button
+            onClick={handleCompile}
+            disabled={status === "Compiling..."}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-zinc-900 dark:bg-zinc-100 px-5 text-white dark:text-black transition-colors hover:bg-zinc-700 dark:hover:bg-zinc-300 disabled:opacity-50"
+          >
+            Compile Code
+          </button>
+
+          {/* BUTTON 3: DEPLOY */}
+          <button
+            onClick={handleDeploy}
+            disabled={!wasmHex || !walletAddress}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-green-600 px-5 text-white transition-colors hover:bg-green-700 disabled:opacity-50 disabled:bg-gray-400"
+          >
+            Deploy
+          </button>
+        </div>
+
+        {/* Log Output Area */}
+        <div className="w-full bg-zinc-100 dark:bg-zinc-900 p-4 rounded-lg font-mono text-sm h-96 overflow-y-auto border border-zinc-200 dark:border-zinc-800">
+           {logs.length === 0 && <span className="opacity-50">System Logs will appear here...</span>}
+           {logs.map((log, i) => (
+             <div key={i} className="mb-1 break-all">{log}</div>
+           ))}
+           {contractId && (
+             <div className="mt-4 p-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 rounded">
+               <strong>Contract ID:</strong> {contractId}
+               <br />
+               <a 
+                 href={`https://stellar.expert/explorer/testnet/contract/${contractId}`} 
+                 target="_blank" 
+                 className="underline"
+               >
+                 View on Explorer
+               </a>
+             </div>
+           )}
+        </div>
+
+      </main>
+    </div>
+  );
+}
