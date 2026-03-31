@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Folder, Trash2, Calendar, Loader2 } from "lucide-react";
-import { createClient } from "@/utils/supabase/client";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -38,41 +37,50 @@ export function ProjectsModal({
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchProjects();
-    }
-  }, [isOpen]);
-
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const { data, error } = await supabase
-        .from("projects")
-        .select("id, name, updated_at, created_at, contract_state, frontend_state")
-        .order("updated_at", { ascending: false });
+      const response = await fetch("/api/projects", { cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
 
-      if (error) throw error;
-      setProjects(data || []);
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to load projects");
+      }
+
+      setProjects(payload.projects || []);
     } catch (err: any) {
       console.error("Error fetching projects:", err);
       setError(err.message || "Failed to load projects");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      void fetchProjects();
+    }
+  }, [fetchProjects, isOpen]);
 
   const deleteProject = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm("Are you sure you want to delete this project?")) return;
 
     try {
-      const { error } = await supabase.from("projects").delete().eq("id", id);
-      if (error) throw error;
-      setProjects(projects.filter((p) => p.id !== id));
+      const response = await fetch(`/api/projects/${id}`, {
+        method: "DELETE",
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to delete project");
+      }
+
+      setProjects((prevProjects) =>
+        prevProjects.filter((project) => project.id !== id),
+      );
     } catch (err: any) {
       console.error("Error deleting project:", err);
       alert("Failed to delete project: " + err.message);

@@ -41,17 +41,17 @@ const FAQRow = ({
     onClick: () => void;
 }) => {
     return (
-        <div className="border-t-2 border-black last:border-b-2">
+        <div className="border-t border-white/20 last:border-b">
             <button
                 onClick={onClick}
-                className="w-full flex items-center justify-between py-10 text-left group hover:bg-black/5 transition-colors px-2"
+                className="w-full flex items-center justify-between py-10 text-left group hover:bg-white/5 transition-colors px-2"
             >
-                <span className="text-black text-xl md:text-2xl font-bold tracking-tight transition-colors">
+                <span className="text-white text-xl md:text-2xl font-bold tracking-tight transition-colors">
                     {item.question}
                 </span>
 
                 {/* Icon */}
-                <span className="text-black transition-transform duration-300">
+                <span className="text-white transition-transform duration-300">
                     {isOpen ? <X size={28} strokeWidth={2.5} /> : <Plus size={28} strokeWidth={2.5} />}
                 </span>
             </button>
@@ -65,7 +65,7 @@ const FAQRow = ({
                         transition={{ duration: 0.3, ease: "easeInOut" }}
                         className="overflow-hidden"
                     >
-                        <p className="text-black/70 text-lg md:text-xl leading-relaxed max-w-3xl pb-10 px-2 font-medium">
+                        <p className="text-white/75 text-lg md:text-xl leading-relaxed max-w-3xl pb-10 px-2 font-medium">
                             {item.answer}
                         </p>
                     </motion.div>
@@ -79,10 +79,10 @@ export default function FAQ() {
     const [openIndex, setOpenIndex] = useState<number | null>(0);
 
     return (
-        <section className="text-white px-6 py-40 border-t border-white/5">
+        <section className="text-white px-6 py-40 border-t border-white/10 bg-[radial-gradient(120%_120%_at_50%_0%,#2e1642_0%,#151022_40%,#09070f_100%)]">
             <div className="max-w-[90rem] mx-auto">
                 {/* Title */}
-                <h2 className="text-6xl md:text-7xl font-bold mb-24 tracking-tighter text-black uppercase text-center">
+                <h2 className="text-6xl md:text-7xl font-bold mb-24 tracking-tighter text-white uppercase text-center">
                     FAQ
                 </h2>
 

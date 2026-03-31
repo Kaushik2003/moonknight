@@ -6,8 +6,8 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
+import { auth } from '@clerk/nextjs/server';
 import { getStellarContext } from '@/lib/stellaRAG';
-import { createClient } from '@/utils/supabase/server';
 import { propagateAttributes } from '@langfuse/tracing';
 import { langfuseSpanProcessor } from '@/instrumentation';
 
@@ -46,9 +46,8 @@ export async function POST(request: NextRequest) {
         const { code, fileName, model, fileContents, chatSessionId } = await request.json();
 
         // ─── Resolve user identity (for Langfuse analytics) ─────────────
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        const userId = user?.id || 'anonymous';
+        const { userId } = await auth();
+        const tracedUserId = userId || 'anonymous';
         // ─────────────────────────────────────────────────────────────────
 
         if (!code || typeof code !== 'string' || !code.trim()) {
@@ -189,7 +188,7 @@ Keep your response SHORT (max 10 lines).`;
         const { text } = await propagateAttributes(
             {
                 traceName: 'contract-test',
-                userId,
+                userId: tracedUserId,
                 sessionId: chatSessionId || undefined,
                 tags: ['contract-test', `model:${resolvedModelName}`, `provider:${provider}`],
             },

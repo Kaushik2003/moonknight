@@ -12,11 +12,11 @@ interface WalletGuidePopupProps {
 
 const steps = [
   {
-    title: "Install Freighter Wallet",
-    description: "Visit the Chrome Web Store to install Freighter wallet extension",
+    title: "Install Lace Wallet",
+    description: "Visit the Chrome Web Store to install Lace wallet extension",
     action: (
       <a
-        href="https://chromewebstore.google.com/detail/freighter/bcacfldlkkdogcmkkibnjlakofdplcbk?hl=en"
+        href="https://chromewebstore.google.com/detail/lace/gaplcoiknypgkapikZfsnyoegegapkhl"
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors text-sm font-medium"
@@ -41,7 +41,7 @@ const steps = [
   },
   {
     title: "Start Coding!",
-    description: "You're all set! Start building amazing Stellar smart contracts",
+    description: "You're all set! Start building amazing Midnight smart contracts",
     action: null,
     image: "/gotit.png",
   },

@@ -6,8 +6,8 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createGroq } from '@ai-sdk/groq';
 import { streamText } from 'ai';
+import { auth } from '@clerk/nextjs/server';
 import { formatFileTreeWithExtensions, getFileLanguage } from '@/lib/fileTreeFormatter';
-import { createClient } from '@/utils/supabase/server';
 import { checkBuilderPass } from '@/lib/builder-pass/checkPass';
 import { propagateAttributes } from '@langfuse/tracing';
 import { langfuseSpanProcessor } from '@/instrumentation';
@@ -69,9 +69,8 @@ export async function POST(request: NextRequest) {
     const modelStr = typeof model === 'string' ? model : 'gemini-2.5-flash';
 
     // ─── Resolve user identity (always, for analytics) ───────────────────────
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id || 'anonymous';
+    const { userId } = await auth();
+    const tracedUserId = userId || 'anonymous';
     // ─────────────────────────────────────────────────────────────────────────
 
     // We only actively gatekeep premium models
@@ -79,11 +78,11 @@ export async function POST(request: NextRequest) {
 
     // ─── Builder Pass Guard ────────────────────────────────────────────────────
     if (isPremiumModel) {
-      if (!user) {
+      if (!userId) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
-      const pass = await checkBuilderPass(user.id);
+      const pass = await checkBuilderPass(userId);
       if (!pass.active) {
         return NextResponse.json(
           {
@@ -534,7 +533,7 @@ ${lastUserMessage}`;
     const result = await propagateAttributes(
       {
         traceName: 'contract-chat',
-        userId,
+        userId: tracedUserId,
         sessionId: chatSessionId || undefined,
         tags: ['contract-mode', `model:${resolvedModelName}`, `provider:${provider}`],
       },
@@ -690,7 +689,29 @@ ${lastUserMessage}`;
           controller.close();
         } catch (error) {
           console.error('[chat] Stream error:', error);
-          controller.error(error);
+
+          // Avoid hard stream aborts that show up in the browser as
+          // "TypeError: Failed to fetch" with no actionable detail.
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'The AI response stream failed unexpectedly. Please retry.';
+
+          const fallbackPayload = {
+            chat: {
+              message: `Unable to complete this response: ${errorMessage}`,
+            },
+            editor: {
+              changes: [],
+            },
+          };
+
+          try {
+            controller.enqueue(encoder.encode(JSON.stringify(fallbackPayload)));
+          } catch (enqueueError) {
+            console.error('[chat] Failed to enqueue stream fallback payload:', enqueueError);
+          }
+
+          controller.close();
         }
       },
     });

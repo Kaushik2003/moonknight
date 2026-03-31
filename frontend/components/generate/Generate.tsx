@@ -27,7 +27,7 @@ import {
   pathExists,
 } from "@/lib/fileTreeUtils";
 import { FileTreeSyncData, FileContentSyncData } from "@/hooks/useSandbox";
-import { createClient } from "@/utils/supabase/client";
+import { useUser } from "@clerk/nextjs";
 import { ProjectsModal } from "@/components/ide/ProjectsModal";
 import { SaveProjectDialog } from "@/components/ide/SaveProjectDialog";
 
@@ -146,17 +146,17 @@ const INITIAL_CONTRACT_STATE: WorkspaceState = {
   activeFile: "contracts/hello_world/src/lib.rs",
   recentFiles: ["contracts/hello_world/src/lib.rs"],
   fileContents: {
-    "contracts/hello_world/src/lib.rs": `#![no_std]
-use soroban_sdk::{contract, contractimpl, symbol_short, vec, Env, Symbol, Vec};
+    "contracts/hello_world/src/lib.rs": `pragma language_version >= 0.16;
 
-#[contract]
-pub struct HelloWorldContract;
+import CompactStandardLibrary;
 
-#[contractimpl]
-impl HelloWorldContract {
-    pub fn hello(env: Env, to: Symbol) -> Vec<Symbol> {
-        vec![&env, symbol_short!("Hello"), to]
-    }
+// Public ledger state - visible on blockchain
+export ledger message: Opaque<"string">;
+
+// Circuit to store a message on the blockchain
+// The message will be publicly visible
+export circuit storeMessage(customMessage: Opaque<"string">): [] {
+    message = disclose(customMessage);
 }
 `,
     "contracts/hello_world/Cargo.toml": `[package]
@@ -853,7 +853,7 @@ export default function GeneratePage() {
     DeployedContract[]
   >([]);
 
-  const supabase = createClient();
+  const { user, isLoaded } = useUser();
 
   // Independent Workspace States
   const [contractState, dispatchContract] = useReducer(
@@ -1893,59 +1893,62 @@ export function create${contractName}Client(publicKey: string): ${contractName}C
 
   const handleSaveProject = useCallback(async (projectName?: string) => {
     if (isSaving) return;
+
+    if (!isLoaded || !user) {
+      alert("Please log in to save projects");
+      return;
+    }
+
+    if (!currentProjectId && !projectName) {
+      setIsSaveDialogOpen(true);
+      return;
+    }
+
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        alert("Please log in to save projects");
-        return;
-      }
-
-      if (!currentProjectId && !projectName) {
-        setIsSaveDialogOpen(true);
-        return;
-      }
-
       const finalName = projectName || currentProjectName || "Untitled Project";
+      const isUpdating = Boolean(currentProjectId);
 
       setIsSaving(true);
 
       const payload = {
-        owner_user_id: user.id,
         name: finalName,
-        contract_state: contractState,
-        frontend_state: frontendState,
-        updated_at: new Date().toISOString(),
+        contractState: contractState,
+        frontendState: frontendState,
       };
 
-      if (currentProjectId) {
-        const { error } = await supabase
-          .from("projects")
-          .update(payload)
-          .eq("id", currentProjectId);
-        if (error) throw error;
-        setCurrentProjectName(finalName);
-        setLastSavedAt(payload.updated_at);
-        dispatchFrontend({
-          type: "ADD_LOG",
-          payload: "[project] Project updated successfully",
-        });
-      } else {
-        const { data, error } = await supabase
-          .from("projects")
-          .insert([{ ...payload, name: finalName }])
-          .select()
-          .single();
-        if (error) throw error;
-        setCurrentProjectId(data.id);
-        setCurrentProjectName(finalName);
-        setLastSavedAt(payload.updated_at);
-        dispatchFrontend({
-          type: "ADD_LOG",
-          payload: `[project] Project "${data.name}" created successfully`,
-        });
+      const response = await fetch(
+        isUpdating ? `/api/projects/${currentProjectId}` : "/api/projects",
+        {
+          method: isUpdating ? "PATCH" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to save project");
       }
+
+      const savedProject = result.project;
+      const savedName = savedProject?.name || finalName;
+      const savedAt = savedProject?.updated_at || new Date().toISOString();
+
+      if (savedProject?.id) {
+        setCurrentProjectId(savedProject.id);
+      }
+
+      setCurrentProjectName(savedName);
+      setLastSavedAt(savedAt);
+      dispatchFrontend({
+        type: "ADD_LOG",
+        payload: isUpdating
+          ? "[project] Project updated successfully"
+          : `[project] Project "${savedName}" created successfully`,
+      });
     } catch (err: any) {
       console.error("Error saving project:", err);
       alert("Failed to save project: " + err.message);
@@ -1953,7 +1956,7 @@ export function create${contractName}Client(publicKey: string): ${contractName}C
       setIsSaving(false);
       setIsSaveDialogOpen(false);
     }
-  }, [currentProjectId, currentProjectName, contractState, frontendState, supabase, isSaving]);
+  }, [currentProjectId, currentProjectName, contractState, frontendState, isLoaded, isSaving, user]);
 
   const handleSelectProject = useCallback((project: any) => {
     setCurrentProjectId(project.id);

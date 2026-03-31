@@ -40,8 +40,8 @@ export function SaveProjectDialog({
   }, [isOpen, defaultName]);
 
   const lastSavedLabel = lastSavedAt
-    ? `Last saved ${format(new Date(lastSavedAt), "MMM d, yyyy • HH:mm")}`
-    : "Saved to your Supabase projects table";
+    ? `Last saved ${format(new Date(lastSavedAt), "MMM d, yyyy HH:mm")}`
+    : "Saved to your MoonKnight workspace";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -52,7 +52,7 @@ export function SaveProjectDialog({
             {defaultName ? "Update Project" : "Save Project"}
           </DialogTitle>
           <DialogDescription className="text-zinc-500 text-sm">
-            Give your project a name so you can reopen it later. State is stored directly in Supabase (JSONB).
+            Give your project a name so you can reopen it later. State is stored server-side for your Clerk account.
           </DialogDescription>
         </DialogHeader>
 
@@ -98,4 +98,3 @@ export function SaveProjectDialog({
     </Dialog>
   );
 }
-

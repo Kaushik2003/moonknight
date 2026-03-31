@@ -10,7 +10,7 @@ const TerminalGraphic = () => {
       {/* Command Bar */}
       <div className="flex-none border-2 border-black p-2 rounded-lg bg-white/50 flex flex-col justify-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
         <div className="flex items-center gap-2 px-1">
-          <span className="text-[#FFA500] font-bold">{">"}</span>
+          <span className="text-[#caa7ff] font-bold">{">"}</span>
           <span className="text-neutral-600">cat src/lib.rs</span>
         </div>
         {/* Progress Bar */}
@@ -150,11 +150,11 @@ const LayersGraphic = () => {
           <g transform="translate(0, 0)">
             {/* Layer Shape */}
             <path d="M-70 0 L0 30 L70 0 L0 -30 Z" stroke="#1A1A1A" strokeOpacity="1" strokeWidth="1" fill="#EAE7DD" fillOpacity="0.9" />
-            {/* Orange Dots */}
-            <circle cx="0" cy="5" r="4" fill="#D98E28" />
-            <circle cx="20" cy="15" r="4" fill="#D98E28" />
-            {/* Connection between orange dots */}
-            <path d="M0 5 L20 15" stroke="#D98E28" strokeWidth="2" />
+            {/* Accent Dots */}
+            <circle cx="0" cy="5" r="4" fill="#b889ff" />
+            <circle cx="20" cy="15" r="4" fill="#b889ff" />
+            {/* Connection between accent dots */}
+            <path d="M0 5 L20 15" stroke="#b889ff" strokeWidth="2" />
             {/* Grey Dot */}
             <circle cx="40" cy="-5" r="3" fill="#1A1A1A" fillOpacity="0.3" />
           </g>
@@ -220,13 +220,13 @@ const SecurityGraphic = () => {
       {/* Ticket Shape */}
       <div className="relative bg-[#EAE7DD] border-2 border-black w-48 h-24 flex items-center justify-center overflow-hidden transform hover:scale-105 transition-transform duration-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
         <div className="absolute -left-1.5 top-0 bottom-0 w-3 flex flex-col justify-between py-1">
-          {[...Array(8)].map((_, i) => <div key={i} className="w-2.5 h-2.5 rounded-full bg-[#fbe1b1] border border-black" />)}
+          {[...Array(8)].map((_, i) => <div key={i} className="w-2.5 h-2.5 rounded-full bg-[#1b1526] border border-white/25" />)}
         </div>
         <div className="absolute -right-1.5 top-0 bottom-0 w-3 flex flex-col justify-between py-1">
-          {[...Array(8)].map((_, i) => <div key={i} className="w-2.5 h-2.5 rounded-full bg-[#fbe1b1] border border-black" />)}
+          {[...Array(8)].map((_, i) => <div key={i} className="w-2.5 h-2.5 rounded-full bg-[#1b1526] border border-white/25" />)}
         </div>
 
-        <span className="font-mono font-bold text-[#D98E28]/80 text-2xl tracking-[0.2em] rotate-[-5deg]">SECURE</span>
+        <span className="font-mono font-bold text-[#caa7ff]/90 text-2xl tracking-[0.2em] rotate-[-5deg]">SECURE</span>
       </div>
     </div>
   )
@@ -316,20 +316,30 @@ const Card = ({
     whileInView={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.5, delay }}
     viewport={{ once: true }}
-    className={`flex flex-col p-4 border-2 border-black bg-[#FFA500] overflow-hidden rounded-3xl hover:-translate-y-1 transition-all duration-300 relative group shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ${className}`}
+    className={`flex flex-col p-4 border border-white/15 bg-black/80 overflow-hidden rounded-3xl hover:-translate-y-1 transition-all duration-300 relative group shadow-[0_18px_45px_rgba(0,0,0,0.45)] ring-1 ring-white/10 ${className}`}
   >
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 opacity-45"
+      style={{
+        background: "linear-gradient(112deg, transparent 10%, rgba(255,255,255,0.06) 25%, rgba(182,128,255,0.28) 42%, rgba(255,255,255,0.08) 58%, transparent 75%)",
+        backgroundSize: "220% 100%",
+        animation: "bento-glimmer 6.2s linear infinite",
+      }}
+    />
+
     {/* Text Section */}
     <div className="p-5 z-10 relative">
-      <h3 className="text-base font-mono font-bold tracking-wider text-[#1A1A1A] uppercase mb-2">
+      <h3 className="text-base font-mono font-bold tracking-wider text-white uppercase mb-2">
         {header}
       </h3>
-      <p className="text-sm leading-snug text-neutral-600 font-medium tracking-tight">
+      <p className="text-sm leading-snug text-white/75 font-medium tracking-tight">
         {description}
       </p>
     </div>
 
     {/* Graphic Section */}
-    <div className="flex-grow bg-[#FFF3E0] relative flex items-center justify-center overflow-hidden p-4 rounded-xl border-2 border-black shadow-inner">
+    <div className="flex-grow bg-[#11131a]/95 relative flex items-center justify-center overflow-hidden p-4 rounded-xl border border-white/20 shadow-inner z-10">
       {children}
     </div>
   </motion.div>
@@ -339,9 +349,9 @@ const Card = ({
 
 export default function StacyBentoGrid() {
   return (
-    <section className="min-h-screen flex flex-col items-center justify-center px-4 py-24 md:px-8 md:pt-40 md:pb-24 border-t border-white/10">
+    <section className="min-h-screen flex flex-col items-center justify-center px-4 py-24 md:px-8 md:pt-40 md:pb-24 border-t border-white/10 bg-[radial-gradient(125%_120%_at_60%_0%,#3d1d57_0%,#1a1126_38%,#09070f_100%)]">
       <div className="max-w-[90%] mx-auto w-full">
-        <h2 className="text-6xl md:text-7xl font-bold mb-24 tracking-tighter text-black uppercase text-center tracking-tight">
+        <h2 className="text-6xl md:text-7xl font-bold mb-24 tracking-tighter text-[#f7e7ff] uppercase text-center tracking-tight">
           Features
         </h2>
       </div>
@@ -387,13 +397,24 @@ export default function StacyBentoGrid() {
         {/* 5. RIGHT BOTTOM - INTEGRATED */}
         <Card
           header="INTEGRATED"
-          description="Embedding models, GitHub Sync, and Freighter Wallet built in."
+          description="Embedding models, GitHub Sync, and Lace Wallet built in."
           delay={0.5}
         >
           <IntegrationGraphic />
         </Card>
 
       </div>
+
+      <style jsx>{`
+        @keyframes bento-glimmer {
+          0% {
+            background-position: 130% 0;
+          }
+          100% {
+            background-position: -130% 0;
+          }
+        }
+      `}</style>
     </section>
   );
 }

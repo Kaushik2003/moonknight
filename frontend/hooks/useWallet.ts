@@ -1,7 +1,40 @@
 "use client";
 
 import { useState, useCallback, useEffect } from 'react';
-import { isConnected, setAllowed, getAddress, signTransaction, isAllowed } from "@stellar/freighter-api";
+
+// Midnight Wallet SDK imports (when packages become available)
+// import { WalletFacade } from '@midnight-ntwrk/wallet-sdk-facade';
+// For now, using stub functions for Lace wallet compatibility
+
+// Stub functions for Lace wallet - replace with actual Midnight SDK when available
+const isConnected = async (): Promise<boolean> => {
+    // Check if Lace wallet extension is installed
+    // Placeholder for actual implementation
+    return false;
+};
+
+const setAllowed = async (): Promise<void> => {
+    // Request permission from Lace wallet
+    // Placeholder for actual implementation
+};
+
+const getAddress = async (): Promise<{ address: string }> => {
+    // Get the active address from Lace wallet
+    // Placeholder for actual implementation
+    return { address: "" };
+};
+
+const isAllowed = async (): Promise<boolean> => {
+    // Check if Lace wallet has given permission
+    // Placeholder for actual implementation
+    return false;
+};
+
+const signTransaction = async (xdr: string, options: { networkPassphrase: string }): Promise<{ error?: string; signedTxXdr?: string }> => {
+    // Sign transaction using Lace wallet
+    // Placeholder for actual implementation
+    return { error: "Lace wallet integration pending" };
+};
 
 export type WalletStatus = "disconnected" | "connecting" | "connected" | "error";
 
@@ -56,7 +89,7 @@ export function useWallet(): UseWalletReturn {
         try {
             const installed = await isConnected();
             if (!installed) {
-                const msg = "Freighter wallet is not installed. Please install the Freighter browser extension.";
+                const msg = "Lace wallet is not installed. Please install the Lace browser extension.";
                 setError(msg);
                 setStatus("error");
                 addLog(`[ERROR] ${msg}`);

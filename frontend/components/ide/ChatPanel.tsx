@@ -24,7 +24,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import AccountsDialog from "../layout/AccountsDialog";
 import { useChat } from '@ai-sdk/react';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
-import { useSupabaseSession } from "@/hooks/useSupabaseSession";
+import { useClerkSession } from "@/hooks/useClerkSession";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { FileNode } from "@/types/ide";
 import ReactMarkdown from 'react-markdown';
@@ -102,13 +102,13 @@ export function ChatPanel({
   walletAddress,
   walletStatus,
 }: ChatPanelProps) {
-  const { user } = useSupabaseSession();
+  const { user } = useClerkSession();
   const { isActive: isPassActive } = useBuilderPass();
   const [selectedModel, setSelectedModel] = useState<AIModel>("gemini-2.5-flash");
   const [showPricingModal, setShowPricingModal] = useState(false);
 
-  const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
-  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "User";
+  const avatarUrl = user?.imageUrl || undefined;
+  const displayName = user?.name || user?.email || "User";
   const userInitial = displayName?.charAt(0)?.toUpperCase() || "U";
 
   const [isModelDropdownOpen, setModelDropdownOpen] = useState(false);
@@ -192,6 +192,7 @@ export function ChatPanel({
       // Detect 402 Payment Required (Builder Pass needed)
       // The AI SDK wraps HTTP errors as message text
       const errStr = error?.message || String(error);
+
       if (errStr.includes('402') || errStr.includes('PASS_REQUIRED') || errStr.includes('Builder Pass required')) {
         // Inject an actionable assistant message into the chat without triggering a new request
         setTimeout(() => {
@@ -210,7 +211,35 @@ export function ChatPanel({
             }
           ]);
         }, 50);
+        return;
       }
+
+      const isNetworkFailure =
+        errStr.includes('Failed to fetch') ||
+        errStr.includes('NetworkError') ||
+        errStr.includes('Load failed') ||
+        errStr.includes('fetch failed');
+
+      const userMessage = isNetworkFailure
+        ? '⚠️ **Connection issue.** The chat request could not reach the server. Please confirm the app is running and your API keys are set, then try again.'
+        : `⚠️ **Chat request failed.** ${errStr}`;
+
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `error-${Date.now()}`,
+            role: 'assistant',
+            content: JSON.stringify({
+              chat: {
+                message: userMessage,
+              },
+              editor: { changes: [] },
+            }),
+            createdAt: new Date(),
+          }
+        ]);
+      }, 50);
     },
     onFinish: async (message) => {
       // Parse the response for editor changes

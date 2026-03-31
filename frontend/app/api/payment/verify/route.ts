@@ -1,32 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { createClient } from "@/utils/supabase/server";
-import { createServerClient } from "@supabase/ssr";
+import { auth } from "@clerk/nextjs/server";
+import { updateRows } from "@/lib/supabaseAdmin";
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Auth check
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Parse body
     const body = await req.json();
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return NextResponse.json(
         { error: "Missing payment fields" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // 3. Verify HMAC-SHA256 signature
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -36,40 +29,36 @@ export async function POST(req: NextRequest) {
       console.warn("[verify] Signature mismatch for order:", razorpay_order_id);
       return NextResponse.json(
         { error: "Invalid payment signature" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // 4. Activate pass: set expires_at = now + 24h, update status
-    const adminSupabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { cookies: { getAll: () => [], setAll: () => {} } }
-    );
-
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-    const { error: updateError } = await adminSupabase
-      .from("builder_passes")
-      .update({
+    const updatedPasses = await updateRows({
+      table: "builder_passes",
+      values: {
         razorpay_payment_id,
         razorpay_signature,
         status: "paid",
         expires_at: expiresAt,
-      })
-      .eq("razorpay_order_id", razorpay_order_id)
-      .eq("user_id", user.id);
+      },
+      filters: [
+        { column: "razorpay_order_id", value: razorpay_order_id },
+        { column: "user_id", value: userId },
+      ],
+      select: "id",
+    });
 
-    if (updateError) {
-      console.error("[verify] DB update error:", updateError.message);
+    if (!updatedPasses[0]) {
       return NextResponse.json(
-        { error: "Failed to activate pass" },
-        { status: 500 }
+        { error: "Builder Pass order not found" },
+        { status: 404 },
       );
     }
 
     console.log(
-      `[verify] Builder Pass activated for user ${user.id}, expires at ${expiresAt}`
+      `[verify] Builder Pass activated for user ${userId}, expires at ${expiresAt}`,
     );
 
     return NextResponse.json({ success: true, expiresAt });

@@ -4,11 +4,11 @@ import { LoginForm } from "@/components/login-form";
 import { LiquidMetalButton } from "@/components/liquid-metal-button";
 import { cn } from "@/lib/utils";
 import { useWallet } from "@/hooks/useWallet";
-import { useSupabaseSession } from "@/hooks/useSupabaseSession";
+import { useUser } from "@clerk/nextjs";
 
 export default function Page() {
   const { address, status, connect, disconnect, error: walletError } = useWallet();
-  const { session } = useSupabaseSession();
+  const { isSignedIn } = useUser();
 
   const isConnected = status === "connected" && !!address;
   const isConnecting = status === "connecting";
@@ -40,7 +40,7 @@ export default function Page() {
               </p>
               <h2 className="text-xl font-semibold text-white">Connect your wallet</h2>
               <p className="text-sm text-white/70">
-                Optionally link your Freighter wallet. You can always do this later from the dashboard.
+                Optionally link your Lace wallet. You can always do this later from the dashboard.
               </p>
             </div>
             <span
@@ -94,9 +94,9 @@ export default function Page() {
             <p className="text-sm text-white/70">
               Sign in with Google to finish onboarding and get access to Generate.
             </p>
-            {session && (
+            {isSignedIn && (
               <p className="text-xs text-emerald-200">
-                You&apos;re already signed in with Google.
+                You&apos;re already signed in.
               </p>
             )}
           </div>

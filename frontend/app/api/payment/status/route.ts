@@ -1,19 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { checkBuilderPass } from "@/lib/builder-pass/checkPass";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const pass = await checkBuilderPass(user.id);
+    const pass = await checkBuilderPass(userId);
 
     return NextResponse.json({
       active: pass.active,

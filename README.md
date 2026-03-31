@@ -1,9 +1,3 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/Midnight-Network-7C3AED?style=for-the-badge" alt="Midnight Network"/>
-  <img src="https://img.shields.io/badge/Compact-ZK_Circuits-1E1E2E?style=for-the-badge" alt="Compact"/>
-  <img src="https://img.shields.io/badge/AI_Powered-LLM-10B981?style=for-the-badge" alt="AI Powered"/>
-</p>
-
 # 🌑 MoonKnight
 
 **AI-powered Compact compiler & UI generator for Midnight Network.**

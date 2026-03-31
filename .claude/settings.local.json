@@ -4,7 +4,9 @@
       "Bash(ls:*)",
       "Bash(sed s/=.*/=***/)",
       "Bash(grep -E RAZORPAY /c/Users/asus/Desktop/proj/StellarIDE/stacy-v2/frontend/.env*)",
-      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }

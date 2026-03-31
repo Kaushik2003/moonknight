@@ -14,7 +14,7 @@ import { ReactLenis } from 'lenis/react';
 export default function LandingPage() {
   return (
     <ReactLenis root>
-      <main className="flex flex-col w-full min-h-screen bg-[#fbe1b1] text-[#354230]">
+      <main className="flex flex-col w-full min-h-screen bg-[#0d0815] text-white">
         <Navbar />
         <div className="relative z-10 flex flex-col items-center w-full min-h-screen px-6 pt-[10vh] pb-20 overflow-hidden">
           <Hero />

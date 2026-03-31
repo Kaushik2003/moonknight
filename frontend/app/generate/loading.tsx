@@ -3,7 +3,7 @@
 export default function Loading() {
   return (
     <div style={styles.container}>
-      <img src="/dhak.webp" alt="Loading" style={styles.logo} />
+      <img src="/dhak.png" alt="Loading" style={styles.logo} />
 
       <style jsx>{`
         @keyframes zoomPulse {

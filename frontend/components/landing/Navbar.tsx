@@ -6,7 +6,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useWallet } from "@/hooks/useWallet";
 import { LiquidMetalButton } from "@/components/liquid-metal-button";
-import { useSupabaseSession } from "@/hooks/useSupabaseSession";
+import { useClerkSession } from "@/hooks/useClerkSession";
 import { useRouter } from "next/navigation";
 
 export function Navbar() {
@@ -14,7 +14,7 @@ export function Navbar() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const { address, status, connect, disconnect } = useWallet();
-    const { session, user, loading } = useSupabaseSession();
+    const { session, user, loading } = useClerkSession();
     const router = useRouter();
     const isConnected = status === "connected" && address;
     const isConnecting = status === "connecting";
@@ -48,8 +48,8 @@ export function Navbar() {
         return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
     };
 
-    const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
-    const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || "User";
+    const avatarUrl = user?.imageUrl || null;
+    const displayName = user?.name || user?.email || "User";
     const userInitial = displayName?.charAt(0)?.toUpperCase() || "U";
 
     const renderLabel = () => {
@@ -109,7 +109,7 @@ export function Navbar() {
                         />
                         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight bg-clip-text text-transparent relative">
                             <span className="relative inline-block bg-gradient-to-r from-white/90 via-primary/80 to-white/70 bg-clip-text text-transparent">
-                                Stacy
+                                MoonKnight
                                 <span className="absolute -inset-1 bg-gradient-to-r from-white/60 via-transparent to-white/40 opacity-30 blur-xl pointer-events-none animate-pulse" aria-hidden="true" />
                             </span>
                         </h1>

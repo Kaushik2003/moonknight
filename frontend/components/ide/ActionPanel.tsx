@@ -308,7 +308,7 @@ export function ActionPanel({
               {/* Wallet Warning */}
               {!isWalletConnected && hasCompiledWasm && (
                 <div className="p-2 rounded-md bg-yellow-500/5 border border-yellow-900/30 text-xs text-yellow-500/70">
-                  Connect your Freighter wallet to deploy
+                  Connect your Lace wallet to deploy
                 </div>
               )}
             </div>

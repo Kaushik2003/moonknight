@@ -101,20 +101,20 @@ const Footer = () => {
       </Toast.Provider> */}
 
             <div
-                className='relative h-full sm:pt-14 pt-8 text-[black] overflow-hidden'
+                className='relative h-full sm:pt-14 pt-8 text-white overflow-hidden bg-[radial-gradient(120%_120%_at_50%_0%,#2e1642_0%,#151022_40%,#09070f_100%)]'
                 ref={container}
             >
                 <div className='sm:container  px-4 mx-auto'>
                     <div className='md:flex justify-between w-full'>
                         <div>
-                            <h1 className='md:text-4xl text-2xl font-semibold'>
+                            <h1 className='md:text-4xl text-2xl font-semibold text-white'>
                                 Let&lsquo;s do great work together
                             </h1>
                             <div className='pt-2 pb-6 md:w-99  '>
-                                <p className='md:text-2xl text-xl  py-4'>
+                                <p className='md:text-2xl text-xl  py-4 text-white'>
                                     Sign up for our updates
                                 </p>
-                                <div className=' hover-button relative bg-black flex justify-between items-center border-2 overflow-hidden  border-black rounded-full  text-white hover:text-black md:text-2xl'>
+                                <div className=' hover-button relative bg-black/50 flex justify-between items-center border-2 overflow-hidden  border-white/30 rounded-full  text-white hover:text-black md:text-2xl backdrop-blur-sm'>
                                     <form
                                         onSubmit={(e) => handleNewsLetterData(e)}
                                         className='relative z-2 grid grid-cols-6  w-full h-full'
@@ -123,7 +123,7 @@ const Footer = () => {
                                             type='email'
                                             name='newsletter_email'
                                             suppressHydrationWarning
-                                            className='border-none bg-transparent  py-3 px-6  col-span-5'
+                                            className='border-none bg-transparent  py-3 px-6  col-span-5 text-white placeholder:text-white/60'
                                             placeholder='Your Email * '
                                         />{' '}
                                         <button
@@ -152,32 +152,32 @@ const Footer = () => {
                         </div>
                         <div className='flex gap-10'>
                             <ul>
-                                <li className='text-2xl pb-2 text-black font-semibold'>
+                                <li className='text-2xl pb-2 text-white font-semibold'>
                                     SITEMAP
                                 </li>
-                                <li className='text-xl font-medium'>
+                                <li className='text-xl font-medium text-white/75 hover:text-white transition-colors'>
                                     <Link href='/'>Home</Link>
                                 </li>
-                                <li className='text-xl font-medium'>
+                                <li className='text-xl font-medium text-white/75 hover:text-white transition-colors'>
                                     <Link href='/about'>About us</Link>
                                 </li>
-                                <li className='text-xl font-medium'>
+                                <li className='text-xl font-medium text-white/75 hover:text-white transition-colors'>
                                     <Link href='/services'>Our Services</Link>
                                 </li>
 
-                                <li className='text-xl font-medium'>
+                                <li className='text-xl font-medium text-white/75 hover:text-white transition-colors'>
                                     <Link href='/projects'>Projects</Link>
                                 </li>
                             </ul>
                             <ul>
-                                <li className='text-2xl pb-2 text-black font-semibold'>
+                                <li className='text-2xl pb-2 text-white font-semibold'>
                                     SOCIAL
                                 </li>
                                 <li className='text-xl font-medium'>
                                     <a
                                         href='https://github.com/rajarshidattapy'
                                         target='_blank'
-                                        className='underline'
+                                        className='underline text-white/75 hover:text-white transition-colors'
                                     >
                                         Github
                                     </a>
@@ -186,7 +186,7 @@ const Footer = () => {
                                     <a
                                         href='https://x.com/stacydotide'
                                         target='_blank'
-                                        className='underline'
+                                        className='underline text-white/75 hover:text-white transition-colors'
                                     >
                                         Twitter
                                     </a>
@@ -212,11 +212,11 @@ const Footer = () => {
                         </h1>
                     </div>
 
-                    <div className='flex md:flex-row flex-col-reverse gap-3 justify-between py-2 text-black'>
+                    <div className='flex md:flex-row flex-col-reverse gap-3 justify-between py-2 text-white/60'>
                         <span className='font-medium'>
                             &copy; 2026 Stacy. All Rights Reserved.
                         </span>
-                        <a href='#' className='font-semibold'>
+                        <a href='#' className='font-semibold text-white/60 hover:text-white transition-colors'>
                             Privacy Policy
                         </a>
                     </div>

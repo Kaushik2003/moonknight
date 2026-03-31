@@ -1,4 +1,4 @@
-import { createServerClient } from "@supabase/ssr";
+import { selectRows } from "@/lib/supabaseAdmin";
 
 interface PassStatus {
   active: boolean;
@@ -11,35 +11,33 @@ interface PassStatus {
  * Call this from API routes, NOT from client components.
  */
 export async function checkBuilderPass(userId: string): Promise<PassStatus> {
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        getAll: () => [],
-        setAll: () => {},
-      },
+  try {
+    const { data } = await selectRows<{ expires_at: string }>({
+      table: "builder_passes",
+      select: "expires_at",
+      filters: [
+        { column: "user_id", value: userId },
+        { column: "status", value: "paid" },
+        {
+          column: "expires_at",
+          operator: "gt",
+          value: new Date().toISOString(),
+        },
+      ],
+      orderBy: { column: "expires_at", ascending: false },
+      limit: 1,
+    });
+
+    if (!data[0]) {
+      return { active: false, expiresAt: null };
     }
-  );
 
-  const { data, error } = await supabase
-    .from("builder_passes")
-    .select("expires_at")
-    .eq("user_id", userId)
-    .eq("status", "paid")
-    .gt("expires_at", new Date().toISOString())
-    .order("expires_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[checkBuilderPass] DB error:", error.message);
+    return { active: true, expiresAt: new Date(data[0].expires_at) };
+  } catch (error) {
+    console.error(
+      "[checkBuilderPass] DB error:",
+      error instanceof Error ? error.message : error,
+    );
     return { active: false, expiresAt: null };
   }
-
-  if (!data) {
-    return { active: false, expiresAt: null };
-  }
-
-  return { active: true, expiresAt: new Date(data.expires_at) };
 }
