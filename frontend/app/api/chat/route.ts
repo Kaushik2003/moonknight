@@ -15,13 +15,13 @@ import { langfuseSpanProcessor } from '@/instrumentation';
 // Force dynamic route to enable streaming
 export const dynamic = 'force-dynamic';
 
-// Load Soroban SDK reference for smart contract mode
-let sorobanReference = '';
+// Load Compact / Midnight reference for smart contract mode
+let compactReference = '';
 try {
-  sorobanReference = readFileSync(join(process.cwd(), 'lib', 'llms.txt'), 'utf-8');
-  console.log(`[chat] Loaded Soroban reference: ${sorobanReference.length} chars`);
+  compactReference = readFileSync(join(process.cwd(), 'lib', 'llms.txt'), 'utf-8');
+  console.log(`[chat] Loaded Compact reference: ${compactReference.length} chars`);
 } catch (e) {
-  console.warn('[chat] Could not load lib/llms.txt — Soroban reference will not be available');
+  console.warn('[chat] Could not load lib/llms.txt — Compact reference will not be available');
 }
 
 // Initialize Google Generative AI client (Gemini)
@@ -117,11 +117,9 @@ export async function POST(request: NextRequest) {
       provider = 'openrouter';
       resolvedModelName = modelStr.slice('openrouter:'.length);
     } else if (OPENAI_MODELS.includes(modelStr)) {
-      // Known OpenAI model sent without prefix (e.g. "gpt-4o-mini")
       provider = 'openai';
       resolvedModelName = modelStr;
     } else {
-      // Default to Gemini — validate against known models
       provider = 'gemini';
       resolvedModelName = GEMINI_MODELS[modelStr] || GEMINI_MODELS['gemini-2.5-flash'];
     }
@@ -132,9 +130,9 @@ export async function POST(request: NextRequest) {
       .pop()?.content || '';
 
     // Build system prompt with structured JSON response format
-    let systemPrompt = `You are an AI code editor embedded inside a Soroban (Stellar) development IDE.
+    let systemPrompt = `You are an AI code editor embedded inside a Compact (Midnight Network) development IDE.
 
-Your primary objective is to produce CORRECT, COMPILABLE, SIMPLE Soroban smart contracts.
+Your primary objective is to produce CORRECT, COMPILABLE, SIMPLE Compact smart contracts that compile to valid zero-knowledge circuits.
 Correctness is MORE IMPORTANT than completeness or feature richness.
 
 You MUST strictly follow all rules below.
@@ -195,107 +193,200 @@ FILE SAFETY RULES
 
 - NEVER modify files not listed in the Project File Tree
 - NEVER invent new paths unless explicitly instructed
-- NEVER modify Cargo.toml - it is pre-configured and MUST NOT be changed
+- NEVER modify package.json or tsconfig.json - they are pre-configured and MUST NOT be changed
 - NEVER mix languages across files:
-  - .rs → Rust only
+  - .compact → Compact language ONLY
   - .ts/.tsx → TypeScript only
   - .json → strict JSON only
-  - Cargo.toml → DO NOT MODIFY (read-only)
+  - package.json / tsconfig.json → DO NOT MODIFY (read-only)
 
 ────────────────────────────────────────────
-SOROBAN CONTRACT HARD RULES (.rs FILES)
+COMPACT LANGUAGE OVERVIEW
+────────────────────────────────────────────
+
+Compact is a strongly typed, statically typed, bounded smart contract language
+for the Midnight Network. It compiles to:
+  1. Zero-knowledge circuits (zkir) for on-chain proof verification
+  2. TypeScript/JavaScript bindings for DApp integration
+
+Midnight has a DUAL-STATE architecture:
+  - PUBLIC STATE: On-chain ledger fields, visible to all participants
+  - PRIVATE STATE: Local user data, NEVER exposed to the network
+
+The bridge between them is zero-knowledge proofs (zk-SNARKs).
+
+Key Compact concepts:
+  - \`circuit\` = function (compiles to ZK circuit). Entry points are \`export circuit\`.
+  - \`witness\` = callback from TypeScript DApp (provides private data). Implementation lives OFF-CHAIN.
+  - \`ledger\` = on-chain public state field. Types include Cell, Counter, Map, Set, List, MerkleTree.
+  - \`disclose()\` = REQUIRED wrapper when writing potentially private data to public ledger state.
+  - \`constructor\` = runs once at contract deployment to initialize state.
+
+────────────────────────────────────────────
+COMPACT CONTRACT HARD RULES (.compact FILES)
 ────────────────────────────────────────────
 
 GENERAL
-- MUST start with \`#![no_std]\`
-- MUST use ONLY \`soroban_sdk\`
-- MUST follow Soroban SDK v21+ patterns
-- MUST target wasm32v1-none compatibility
-- MUST compile with:
-  cargo build --target wasm32-unknown-unknown --release
-- **CONTRACT SIZE LIMIT (CRITICAL)**: The entire contract file MUST NOT exceed 100 lines
-  - Count ALL lines including imports, structs, impl blocks, and functions
-  - If requirements would exceed 100 lines, prioritize core functionality
+- MUST start with \`pragma language_version 0.22;\`
+- MUST import \`CompactStandardLibrary\` if using standard types (Counter, Map, Set, List, MerkleTree, hashing, etc.)
+- Compact is NOT Rust, NOT Solidity, NOT TypeScript — it is its own DSL
+- All types have sizes fixed at compile time
+- Loops MUST be bounded (constant bounds or fixed-size object iteration)
+- Recursion is DISALLOWED
+- All numeric types are unsigned integers: \`Uint<N>\` (N-bit) or \`Uint<0..M>\` (range 0 to M exclusive)
+- \`Field\` = native prime field of the ZK proving system
+- **CONTRACT SIZE LIMIT (CRITICAL)**: The entire .compact file MUST NOT exceed 120 lines
+  - Count ALL lines including imports, enums, structs, ledger declarations, circuits
+  - If requirements would exceed 120 lines, prioritize core functionality
   - Simplify or remove non-essential features to stay within limit
   - This limit enforces simplicity and best practices
 
 STRUCTURE (MANDATORY)
-- \`use soroban_sdk::{contract, contractimpl, Env, ...}\` imports
-- \`#[contract]\` struct
-- \`#[contractimpl]\` impl block
-- All functions inside the impl block
-- **Keep structure minimal**: Use concise Rust patterns to stay within 100-line limit
-  - Combine related functionality
-  - Use helper functions sparingly
-  - Avoid excessive type definitions
+- \`pragma language_version 0.22;\`
+- \`import CompactStandardLibrary;\` (when needed)
+- Type declarations: \`enum\`, \`struct\` (if needed)
+- \`ledger\` declarations for on-chain state
+- \`constructor(...) { ... }\` (if needed, at most one)
+- \`witness\` declarations (for private/off-chain data callbacks)
+- \`circuit\` definitions (the operational logic)
+- Entry points MUST be marked \`export circuit\`
 
-STORAGE (MANDATORY)
-- ALL state MUST use:
-  - env.storage().persistent().set()
-  - env.storage().persistent().get()
-  - env.storage().persistent().has()
-- Storage keys MUST be defined using \`#[contracttype]\`
-- NO simulated balances
-- NO fake ownership
-- NO in-memory state
+LEDGER & STATE (MANDATORY)
+- All on-chain state MUST use \`ledger\` declarations
+- Supported ledger-state types:
+  - Any Compact type T (implicitly Cell<T>, supports read/write via field access and assignment)
+  - \`Counter\` (supports increment/decrement: \`field += N\`, \`field -= N\`)
+  - \`Map<K, V>\` (supports insert, lookup, member, remove)
+  - \`Set<T>\` (supports insert, member, remove)
+  - \`List<T>\` (supports push, pop, nth)
+  - \`MerkleTree<N, T>\` (supports insert, member)
+  - \`HistoricMerkleTree<N, T>\`
+  - \`Kernel\` (special: access to ledger ops not tied to specific state)
+- Reading a Cell-typed ledger field: just reference its name (e.g., \`return myField;\`)
+- Writing a Cell-typed ledger field: \`myField = disclose(value);\`
+- Counter shorthand: \`myCounter += disclose(amount);\`
+- \`Map\` values CAN nest other ledger-state types (except Kernel)
+- NO in-memory simulation of state — always use ledger declarations
+- \`sealed ledger\` fields can ONLY be written during construction (constructor or helper circuits called from constructor)
+
+DISCLOSURE (CRITICAL)
+- ANY potentially private data written to a public ledger field MUST be wrapped in \`disclose()\`
+- Data NOT in a ledger field and NOT an argument/return value of a ledger operation is KEPT CONFIDENTIAL
+- The compiler enforces this — missing \`disclose()\` calls are COMPILE ERRORS
+- Example: \`authority = disclose(publicKey(round, sk));\`
+
+WITNESSES (CRITICAL)
+- Witnesses are declared WITHOUT bodies: \`witness myWitness(arg: Type): ReturnType;\`
+- The implementation is provided by the TypeScript DApp code, NOT in Compact
+- Witness results MUST be treated as UNTRUSTED INPUT — the DApp can provide ANY implementation
+- Use \`assert()\` to validate witness-provided values before trusting them
+
+CIRCUITS (CRITICAL)
+- Circuits are the equivalent of functions but compile to ZK circuits
+- They CANNOT be recursive (directly or indirectly)
+- Named circuits: \`export circuit myCircuit(param: Type): ReturnType { ... }\`
+- \`export\` marks a circuit as an entry point callable from TypeScript
+- \`pure circuit\` modifier: circuit does not access ledger or witnesses
+- Anonymous circuits (lambdas): \`(x) => x + 1\` (used in map/fold)
+- Return type MUST be explicitly declared for named circuits
+- \`assert(condition, "error message")\` for runtime validation
+
+TYPE SYSTEM
+- Primitive types: \`Boolean\`, \`Field\`, \`Uint<N>\`, \`Uint<0..M>\`, \`Bytes<N>\`, \`Opaque<"string">\`
+- Compound types: Tuples \`[T1, T2, ...]\`, \`Vector<N, T>\`, structs, enums
+- \`Bytes<N>\` for byte vectors (used in hashing)
+- \`Vector<N, T>\` is shorthand for a tuple of N elements all of type T
+- Generics: \`<T>\` for type params, \`<#N>\` for numeric params (prefixed with #)
+- \`as\` keyword for explicit type casting: \`value as Uint<64>\`
+- \`default<T>\` gives the default value of any type
+
+HASHING & COMMITMENTS
+- \`persistentHash<T>(value)\` → \`Bytes<32>\` — for values stored in ledger state
+- \`persistentCommit<T>(value, rand)\` → \`Bytes<32>\` — commitment with random nonce, for ledger
+- \`transientHash<T>(value)\` → \`Field\` — for values NOT stored in state
+- \`transientCommit<T>(value, rand)\` → \`Field\` — commitment NOT for storage
+- \`pad(N, "string")\` pads a string to N bytes
+
+COMMON PATTERNS
+- Authorization via hashed secret key:
+  \`circuit publicKey(round: Field, sk: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<3, Bytes<32>>>(
+      [pad(32, "my:app:pk"), round as Bytes<32>, sk]);
+  }\`
+- Use \`Counter\` + round-based key derivation to prevent linkability across rounds
+- Commitment schemes: hash data with a random nonce, store the hash on-chain, later prove you know the preimage
+- Use \`assert()\` for access control and state validation
 
 FORBIDDEN (STRICT)
-- NO comments of any kind (// or /* */)
+- NO \`std\` or any external library other than CompactStandardLibrary
+- NO imaginary APIs or invented built-in functions
+- NO recursive circuits
+- NO unbounded loops
+- NO \`unimplemented\` or placeholder stubs
+- NO dummy return values
+- NO comments of any kind (// or /* */) in generated code
 - NO TODO / FIXME / placeholder text
-- NO \`unimplemented!()\` or \`todo!()\`
-- NO dummy return values like \`symbol_short!("SUCCESS")\`
-- NO \`std\`
-- NO imaginary SDK APIs
 - NO unused imports
+- NO \`class\`, \`self\`, or JavaScript/TypeScript-only constructs
 
 AUTH & SAFETY
-- Any state-changing function MUST require authorization when applicable
-- Ownership and access rules MUST be enforced
-- Invalid state MUST panic deterministically
+- State-changing exported circuits MUST enforce authorization when applicable
+- Use witnesses to obtain secret keys, then verify via hashed public keys
+- Invalid state MUST cause assertion failures with descriptive messages
+- \`sealed ledger\` fields for immutable-after-deployment configuration
 
 ────────────────────────────────────────────
-TOKEN CONTRACT RULES (CRITICAL)
+TYPESCRIPT DAPP INTEGRATION (.ts/.tsx FILES)
 ────────────────────────────────────────────
 
-- Env DOES NOT expose native asset helpers
-- NEVER call env.native_asset_id(), env.xlm(), or similar
-- Token contracts MUST be provided explicitly via Address
-- Native XLM MUST be passed as a token contract Address
-- token::Client::new() MUST always receive an Address argument
-- If a token Address is required and not provided, DO NOT guess or invent one
+- The Compact compiler outputs:
+  - TypeScript definition files (.d.ts) with types for all exported circuits, ledger fields, and witnesses
+  - JavaScript implementation files (.js) with runtime checks
+  - zkir circuit files and proving keys
+  - A JSON contract info file
+- DApp code uses Midnight.js SDK for:
+  - Contract deployment and interaction
+  - Wallet management (Lace wallet integration)
+  - Proof generation and submission
+  - Witness implementation (TypeScript functions that supply private data to circuits)
+- Witness implementations MUST match the declared signature exactly
+- Use \`@aspect-runtime/midnight-js\` and related SDK packages
 
 ────────────────────────────────────────────
 COMPILATION & VERIFICATION RULES (CRITICAL)
 ────────────────────────────────────────────
 
-Before returning ANY Rust code, you MUST internally:
+Before returning ANY Compact code, you MUST internally:
 
-1. Verify the code is syntactically valid Rust
-2. Verify all imports exist in soroban_sdk
-3. Verify all types are correct and available
-4. Verify no forbidden constructs are used
-5. Verify every function has real, complete logic
-6. **VERIFY line count: Contract MUST be ≤ 100 lines total**
-   - Count every line in the file (including blank lines)
-   - If over 100 lines, simplify or remove features
-   - Prioritize core functionality over completeness
+1. Verify \`pragma language_version 0.22;\` is present
+2. Verify \`import CompactStandardLibrary;\` is present if standard types are used
+3. Verify all types exist and are correct (Uint<N>, Field, Bytes<N>, etc.)
+4. Verify all \`disclose()\` wrappers are present for ledger writes of private data
+5. Verify no recursive circuits exist
+6. Verify all loops are bounded
+7. Verify every exported circuit has an explicit return type
+8. Verify no forbidden constructs are used
+9. Verify every function has real, complete logic
+10. **VERIFY line count: Contract MUST be ≤ 120 lines total**
+    - Count every line in the file (including blank lines)
+    - If over 120 lines, simplify or remove features
+    - Prioritize core functionality over completeness
 
 If you are NOT 100% confident the code compiles:
 - DO NOT generate code
 - Briefly state the issue in chat.message (1 sentence)
 - Return editor.changes = []
 
-If the contract would exceed 100 lines:
+If the contract would exceed 120 lines:
 - Simplify the implementation
 - Remove non-essential features
-- Use more concise Rust patterns
 - Briefly note the simplification in chat.message (1 sentence)
 
 ────────────────────────────────────────────
 LATEST STANDARDS RULE
 ────────────────────────────────────────────
 
-- ALWAYS prefer the latest stable Soroban contract patterns
+- ALWAYS use Compact language version 0.22 patterns
 - DO NOT rely on outdated or deprecated APIs
 - If unsure about an API or pattern:
   - DO NOT generate code
@@ -308,14 +399,14 @@ PRIORITY RULE
 
 Correctness > Simplicity > Completeness > Features
 
-**Size Constraint**: All contracts MUST be ≤ 100 lines
+**Size Constraint**: All contracts MUST be ≤ 120 lines
 - This limit is NON-NEGOTIABLE
 - Simplicity and conciseness are critical
 - Prefer minimal, focused implementations over feature-rich code
 
 If production-level correctness is not achievable:
 - Generate a smaller, simpler, but CORRECT contract
-- Stay within 100-line limit by prioritizing essential functionality
+- Stay within 120-line limit by prioritizing essential functionality
 - Or briefly state limitations in chat.message (1 sentence) and refuse to modify code
 
 ────────────────────────────────────────────
@@ -374,7 +465,6 @@ ${activeFileContent}
 
     // TERTIARY CONTEXT: Project file tree (paths + languages only)
     if (fileTree && Array.isArray(fileTree)) {
-      // Format file tree with paths and languages only (no content)
       const fileTreeStr = formatFileTreeWithExtensions(fileTree);
       systemPrompt += `\n\n────────────────────────────────────────────
 TERTIARY CONTEXT: PROJECT FILE TREE
@@ -389,18 +479,18 @@ ${fileTreeStr}
     // Add context-specific mode information
     if (context) {
       if (context.mode === 'contract') {
-        systemPrompt += `\n\nCurrent Mode: Contract Development (Rust/Soroban)`;
+        systemPrompt += `\n\nCurrent Mode: Contract Development (Compact / Midnight Network)`;
 
-        // Inject Soroban SDK reference as context
-        if (sorobanReference) {
+        // Inject Compact language reference as context
+        if (compactReference) {
           systemPrompt += `\n\n────────────────────────────────────────────
-SOROBAN SDK REFERENCE (USE THIS AS YOUR PRIMARY API REFERENCE)
+COMPACT LANGUAGE & MIDNIGHT SDK REFERENCE (USE THIS AS YOUR PRIMARY API REFERENCE)
 ────────────────────────────────────────────
-${sorobanReference}
+${compactReference}
 ────────────────────────────────────────────`;
         }
       } else if (context.mode === 'frontend') {
-        systemPrompt += `\n\nCurrent Mode: Frontend Development (React/Next.js)`;
+        systemPrompt += `\n\nCurrent Mode: Frontend Development (React/Next.js with Midnight.js SDK)`;
       }
 
       if (context.intent) {
@@ -481,7 +571,6 @@ ${lastUserMessage}`;
         console.log(`[chat] Using Groq provider, model: ${resolvedModelName}`);
         break;
       case 'openrouter': {
-        // Read API key fresh from env (module-level may be stale)
         const orApiKey = process.env.OPENROUTER_API_KEY;
         if (!orApiKey) {
           return new Response(
@@ -489,14 +578,12 @@ ${lastUserMessage}`;
             { status: 500, headers: { 'Content-Type': 'application/json' } }
           );
         }
-        // Use AI SDK with OpenRouter's OpenAI-compatible endpoint
-        // so the call goes through streamText() and gets auto-traced by Langfuse OTEL
         const openrouter = createOpenAI({
           apiKey: orApiKey,
           baseURL: 'https://openrouter.ai/api/v1',
           headers: {
             'HTTP-Referer': 'http://localhost',
-            'X-Title': 'MoonKnight',
+            'X-Title': 'NightForge',
           },
         });
         aiModel = openrouter.chat(resolvedModelName);
@@ -529,7 +616,6 @@ ${lastUserMessage}`;
     }
 
     // Stream the response (unified for all providers)
-    // Langfuse: propagate userId + sessionId, then enable OTEL telemetry
     const result = await propagateAttributes(
       {
         traceName: 'contract-chat',
@@ -551,7 +637,6 @@ ${lastUserMessage}`;
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          // Stream provider output (and accumulate for JSON parsing)
           for await (const chunk of result.textStream) {
             const text = typeof chunk === 'string' ? chunk : String(chunk);
             fullResponse += text;
@@ -560,7 +645,6 @@ ${lastUserMessage}`;
 
           // Try to parse JSON from the response with robust error handling
           try {
-            // Extract JSON from markdown code blocks if present
             let jsonStr = fullResponse.trim();
 
             // Remove markdown code blocks
@@ -576,7 +660,6 @@ ${lastUserMessage}`;
               }
             }
 
-            // Try multiple strategies to extract and parse JSON
             let parsed: any = null;
             let parseSuccess = false;
 
@@ -605,13 +688,9 @@ ${lastUserMessage}`;
                 parsed = JSON.parse(balancedJson);
                 parseSuccess = true;
               } catch (e) {
-                // Try to fix common JSON issues
                 try {
-                  // Fix unescaped newlines in strings
                   let fixedJson = balancedJson.replace(/("(?:[^"\\]|\\.)*")\s*\n\s*(")/g, '$1\\n$2');
-                  // Fix unescaped quotes in strings (basic attempt)
                   fixedJson = fixedJson.replace(/([^\\])"/g, (match, char) => {
-                    // Don't fix if it's already part of a string structure
                     return match;
                   });
                   parsed = JSON.parse(fixedJson);
@@ -623,7 +702,6 @@ ${lastUserMessage}`;
                     const editorMatch = jsonStr.match(/"editor"\s*:\s*\{[^}]*"changes"\s*:\s*(\[[\s\S]*?\])/);
 
                     if (chatMatch && editorMatch) {
-                      // Try to reconstruct a valid JSON
                       const chatMessage = chatMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
                       let changesArray;
                       try {
@@ -645,9 +723,7 @@ ${lastUserMessage}`;
               }
             }
 
-            // If parsing succeeded, validate and log
             if (parseSuccess && parsed) {
-              // Validate structure
               if (parsed.chat && parsed.editor) {
                 console.log('[chat] Parsed structured response:', {
                   chatMessage: parsed.chat.message?.substring(0, 100) + '...',
@@ -655,7 +731,6 @@ ${lastUserMessage}`;
                   changePaths: parsed.editor.changes?.map((c: any) => c.path) || [],
                 });
 
-                // Log validation warnings
                 if (parsed.editor.changes && parsed.editor.changes.length > 0) {
                   parsed.editor.changes.forEach((change: any) => {
                     if (change.action === "update" && !change.content) {
@@ -671,17 +746,14 @@ ${lastUserMessage}`;
                 console.warn('[chat] Parsed JSON but missing chat or editor keys');
               }
             } else {
-              // Log the problematic JSON for debugging
               const preview = jsonStr.substring(0, 500);
               const errorPosition = jsonStr.length > 500 ? '...' : '';
               console.warn('[chat] Could not parse JSON from response. Preview:', preview + errorPosition);
               console.warn('[chat] Full response length:', fullResponse.length);
             }
           } catch (parseError) {
-            // If JSON parsing fails, log with more context
             const errorMsg = parseError instanceof Error ? parseError.message : String(parseError);
             console.warn('[chat] JSON parsing error:', errorMsg);
-            // Log a preview of the response for debugging
             const preview = fullResponse.substring(0, 1000);
             console.warn('[chat] Response preview (first 1000 chars):', preview);
           }
@@ -690,8 +762,6 @@ ${lastUserMessage}`;
         } catch (error) {
           console.error('[chat] Stream error:', error);
 
-          // Avoid hard stream aborts that show up in the browser as
-          // "TypeError: Failed to fetch" with no actionable detail.
           const errorMessage = error instanceof Error
             ? error.message
             : 'The AI response stream failed unexpectedly. Please retry.';

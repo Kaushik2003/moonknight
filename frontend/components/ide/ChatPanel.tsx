@@ -75,10 +75,8 @@ interface ChatPanelProps {
 const MODELS: { id: AIModel; name: string; icon: string }[] = [
   { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", icon: "/gemini.webp" },
   { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", icon: "/gemini.webp" },
-  { id: "deepseek:deepseek-chat", name: "DeepSeek", icon: "/deepseek.webp" },
   { id: "groq:moonshotai/kimi-k2-instruct-0905", name: "Kimi K2", icon: "/kimi.png" },
   { id: "gpt-4o-mini", name: "GPT-4o-mini", icon: "/openai.jpg" },
-  { id: "openrouter:z-ai/glm-4.5-air:free", name: "GLM 4.5", icon: "/glm.png" },
 ];
 
 // Models available in Frontend mode only (must match backend model_registry.py)
@@ -1259,7 +1257,7 @@ export function ChatPanel({
                           ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 cursor-wait"
                           : "bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-emerald-400 hover:border-emerald-500/40 hover:bg-emerald-500/10"
                       )}
-                      title="Test contract with Stella RAG"
+                      title="Test Compact Contract"
                     >
                       {isTesting ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />

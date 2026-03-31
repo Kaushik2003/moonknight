@@ -7,7 +7,6 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createGroq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 import { auth } from '@clerk/nextjs/server';
-import { getStellarContext } from '@/lib/stellaRAG';
 import { propagateAttributes } from '@langfuse/tracing';
 import { langfuseSpanProcessor } from '@/instrumentation';
 

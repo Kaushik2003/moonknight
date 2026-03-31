@@ -1,770 +1,319 @@
-# Soroban Smart Contract Development Guide
-# SDK Version: 21.0.0
+# Compact Smart Contract Development Guide
 
-This document contains essential patterns and API documentation for writing Soroban smart contracts on the Stellar blockchain.
+## 1. What is Compact?
 
-## COMPLETE SDK 21.0.0 API REFERENCE
+Compact is Midnight's domain-specific, strongly typed, statically typed, and bounded smart contract language, designed to be used alongside TypeScript. It compiles to JavaScript (and TypeScript definition files) as well as zero-knowledge (ZK) circuits. [[Compact overview](https://docs.midnight.network/compact/reference/compact-reference#overview)]
 
-### Env Methods (always available as first parameter)
-```rust
-env.storage()                       // Access storage
-env.events()                        // Access events
-env.ledger()                        // Access ledger info
-env.current_contract_address()      // Get this contract's Address
-env.deployer()                      // Access deployer functionality
-env.crypto()                        // Access crypto functions
-env.prng()                          // Access random number generator
+Each Compact contract has three components:
+- A **replicated public ledger** component (on-chain state)
+- A **zero-knowledge circuit** component (proves valid execution without revealing private data)
+- A **local off-chain** component (arbitrary code in TypeScript) [[Compact overview](https://docs.midnight.network/compact/reference/compact-reference#overview)]
+
+---
+
+## 2. Installation
+
+Install the Compact devtools and toolchain:
+
+```bash
+# Install devtools
+curl --proto '=https' --tlsv1.2 -LsSf \
+  https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
+
+# Add to PATH
+source $HOME/.local/bin/env
+
+# Install latest toolchain
+compact update
+
+# Verify
+compact compile --version
 ```
 
-### Storage API
-```rust
-// Instance storage (contract-level, persists with contract)
-env.storage().instance().set(&key, &value)           // Write value
-env.storage().instance().get(&key) -> Option<T>      // Read value (returns Option)
-env.storage().instance().has(&key) -> bool           // Check exists
-env.storage().instance().remove(&key)                // Delete key
-env.storage().instance().extend_ttl(threshold, extend_to)  // Extend TTL
+[[installation guide](https://docs.midnight.network/getting-started/installation)]
 
-// Persistent storage (user data, longer TTL)
-env.storage().persistent().set(&key, &value)
-env.storage().persistent().get(&key) -> Option<T>
-env.storage().persistent().has(&key) -> bool
-env.storage().persistent().remove(&key)
+---
 
-// Temporary storage (short-lived)
-env.storage().temporary().set(&key, &value)
-env.storage().temporary().get(&key) -> Option<T>
-```
+## 3. Contract Structure
 
-### Address Methods
-```rust
-address.require_auth()              // Verify caller authorized this call (REQUIRED before state changes!)
-address.require_auth_for_args(args) // Verify auth with specific args
-address == other_address            // Compare addresses
-address.clone()                     // Clone the address
-```
+A Compact program can contain:
+- `pragma` — language version declaration
+- `import` — imports from modules or the standard library
+- `enum` / `struct` — custom type definitions
+- `ledger` — public on-chain state declarations
+- `witness` — callback functions provided by the TypeScript DApp (private data)
+- `constructor` — runs once on deployment to initialize state
+- `circuit` — the operational functions of the contract
 
-### Vec<T> Methods (IMPORTANT: use push_back, NOT push!)
-```rust
-Vec::new(&env) -> Vec<T>            // Create empty vec
-vec.push_back(item)                 // Add to end (NOT .push()!)
-vec.push_front(item)                // Add to start
-vec.pop_back() -> Option<T>         // Remove from end
-vec.pop_front() -> Option<T>        // Remove from start
-vec.get(index) -> Option<T>         // Get by index
-vec.set(index, value)               // Set by index
-vec.remove(index) -> Option<T>      // Remove by index
-vec.len() -> u32                    // Get length
-vec.is_empty() -> bool              // Check if empty
-vec.first() -> Option<T>            // Get first
-vec.last() -> Option<T>             // Get last
-vec.iter() -> Iterator              // Iterate (requires T: Clone!)
-vec.contains(&item) -> bool         // Check contains
-vec.append(&other_vec)              // Append another vec
-```
+[[programs reference](https://docs.midnight.network/compact/reference/compact-reference#programs)]
 
-### Map<K, V> Methods (IMPORTANT: takes OWNED keys, not &references!)
-```rust
-Map::new(&env) -> Map<K, V>         // Create empty map
-map.set(key, value)                 // Set (OWNED key, not &key!)
-map.get(key) -> Option<V>           // Get (OWNED key, not &key!)
-map.contains_key(key) -> bool       // Check key exists (OWNED key!)
-map.remove(key) -> Option<V>        // Remove (OWNED key!)
-map.len() -> u32                    // Get size
-map.is_empty() -> bool              // Check if empty
-map.keys() -> Vec<K>                // Get all keys
-map.values() -> Vec<V>              // Get all values
-```
+### Minimal Example
 
-### String Methods
-```rust
-String::from_str(&env, "text")      // Create from &str (NOT String::from!)
-string.len() -> u32                 // Get length
-```
+```compact
+pragma language_version >= 0.22;
 
-### Symbol Methods  
-```rust
-Symbol::new(&env, "name")           // Create symbol (NOT Symbol::from!)
-symbol_short!("short")              // Create short symbol (<= 9 chars)
-```
+import CompactStandardLibrary;
 
-### token::Client Methods (for Stellar assets)
-```rust
-token::Client::new(&env, &token_address)  // Create client
-client.transfer(&from, &to, &amount)      // Transfer tokens
-client.balance(&address) -> i128          // Get balance
-client.decimals() -> u32                  // Get decimals
-client.name() -> String                   // Get name
-client.symbol() -> Symbol                 // Get symbol
-client.allowance(&from, &spender) -> i128 // Get allowance
-client.approve(&from, &spender, &amount, &expiration)  // Approve spending
-client.burn(&from, &amount)               // Burn tokens
-client.mint(&to, &amount)                 // Mint tokens (admin only)
-```
+export ledger round: Counter;
 
-### Ledger Info
-```rust
-env.ledger().timestamp() -> u64     // Current timestamp (seconds)
-env.ledger().sequence() -> u32      // Current ledger sequence
-env.ledger().network_id() -> Bytes  // Network ID
-```
-
-### Events
-```rust
-env.events().publish(
-    (topic1, topic2, ...),           // Topics tuple
-    (data1, data2, ...)              // Data tuple
-)
-```
-
-### Crypto Functions
-```rust
-env.crypto().sha256(&bytes) -> BytesN<32>
-env.crypto().keccak256(&bytes) -> BytesN<32>
-env.crypto().ed25519_verify(&public_key, &message, &signature) -> bool
-```
-
-### Random Numbers (PRNG) — IMPORTANT: use ONLY these methods!
-```rust
-env.prng().gen::<u64>()                   // Generate random u64
-env.prng().gen_range::<u64>(0..100)       // Random u64 in [0, 100)
-env.prng().gen_range::<u64>(1..=6)        // Random u64 in [1, 6] (dice roll)
-env.prng().gen_range::<u64>(0..2)         // Coin flip: 0 or 1
-env.prng().u64_in_range(0..=1)            // Also coin flip (u64 helper)
-env.prng().gen_len::<Bytes>(32)           // Random Bytes of length 32
-env.prng().fill(&mut value)               // Fill type with random data
-env.prng().shuffle(&mut vec)              // Shuffle a Vec
-env.prng().seed(bytes)                    // Reseed the PRNG
-```
-⚠️ FORBIDDEN methods (DO NOT EXIST):
-- `env.prng().random_bytes()` — DOES NOT EXIST
-- `env.prng().random()` — DOES NOT EXIST
-- `env.prng().next()` — DOES NOT EXIST
-- `env.prng().rand()` — DOES NOT EXIST
-
-## ⚠️ CRITICAL MISTAKES TO AVOID (SDK 21)
-
-### MISTAKE 1: Map takes OWNED keys, NOT references!
-```rust
-// WRONG - ERROR: expected Address, found &Address
-balances.get(&user)
-map.contains_key(&key)
-
-// CORRECT - use .clone()
-balances.get(user.clone())
-map.contains_key(key.clone())
-```
-
-### MISTAKE 2: Vec uses push_back(), NOT push()!
-```rust
-// WRONG - no method named `push`
-items.push(value);
-
-// CORRECT
-items.push_back(value);
-```
-
-### MISTAKE 3: Custom structs in Vec need #[derive(Clone)]
-```rust
-// CORRECT
-#[contracttype]
-#[derive(Clone)]  // REQUIRED!
-
-pub struct MyStruct { ... }
-```
-
-### MISTAKE 4: No to_string() in no_std!
-```rust
-// WRONG
-let id = num.to_string();
-
-// CORRECT - use integers directly
-let id: u64 = counter;
-```
-
-### MISTAKE 5: Use Symbol::new() and String::from_str()
-```rust
-// WRONG - doesn't exist!
-Symbol::from("name")
-String::from("text")
-
-// CORRECT
-Symbol::new(&env, "name")
-String::from_str(&env, "text")
-```
-
-## Contract Structure
-
-Every Soroban contract must follow this structure:
-
-```rust
-#![no_std]
-use soroban_sdk::{contract, contractimpl, Env};
-
-#[contract]
-pub struct MyContract;
-
-#[contractimpl]
-impl MyContract {
-    pub fn my_function(env: Env) {
-        // implementation
-    }
+export circuit increment(): [] {
+  round.increment(1);
 }
 ```
 
-## Core Imports from soroban_sdk
+[[counter tutorial](https://docs.midnight.network/tutorials/counter/smart-contract#write-the-smart-contract)]
 
-```rust
-// Always required
-use soroban_sdk::{contract, contractimpl, Env};
+---
 
-// Types - import only what you use
-use soroban_sdk::{
-    Address,      // Wallet/contract addresses
-    String,       // String type (not std::String)
-    Symbol,       // Symbol identifiers  
-    Vec,          // Vector type
-    Map,          // Key-value map
-    Bytes,        // Raw bytes
-    BytesN,       // Fixed-size bytes
+## 4. Language Version Pragma
+
+Always declare the language version at the top of your contract:
+
+```compact
+pragma language_version >= 0.22;
+```
+
+This locks your contract to a minimum Compact version and prevents breaking changes from future compiler versions. [[bboard tutorial](https://docs.midnight.network/tutorials/bboard/smart-contract#write-the-smart-contract)]
+
+---
+
+## 5. Standard Library
+
+Import with:
+
+```compact
+import CompactStandardLibrary;
+```
+
+Key types and circuits provided: [[standard library](https://docs.midnight.network/compact/standard-library)]
+
+| Category | Items |
+|---|---|
+| Common types | `Maybe<T>`, `Either<A,B>`, `ContractAddress`, `UserAddress` |
+| Hashing | `transientHash`, `transientCommit`, `persistentHash`, `persistentCommit` |
+| Elliptic curve | `ecAdd`, `ecMul`, `ecMulGenerator`, `hashToCurve` |
+| Merkle tree | `merkleTreePathRoot`, `merkleTreePathRootNoLeafHash` |
+| Coin management | `tokenType`, `nativeToken`, `sendShielded`, `receiveShielded`, `mintShieldedToken` |
+| Optional values | `some<T>(value)`, `none<T>()` |
+
+---
+
+## 6. Primitive Types
+
+| Type | Description |
+|---|---|
+| `Boolean` | `true` or `false` |
+| `Uint<n>` | Sized unsigned integer (up to *n* bits) |
+| `Uint<m..n>` | Bounded unsigned integer in range [m, n) |
+| `Field` | Unsigned integer up to the ZK field order |
+| `Bytes<n>` | Byte vector of length *n* |
+| `Vector<n, T>` | Tuple of *n* values of type *T* |
+| `[T1, T2, ...]` | Heterogeneous tuple |
+| `Opaque<'string'>` | Opaque value (manipulable in witnesses, hashed in circuits) |
+
+[[primitive types](https://docs.midnight.network/compact/reference/compact-reference#primitive-types)]
+
+---
+
+## 7. Program-Defined Types
+
+### Enumerations
+
+```compact
+export enum AuctionState {
+  CLOSED,
+  OPEN
+}
+```
+
+[[enum types](https://docs.midnight.network/compact/reference/compact-reference#enumeration-types)]
+
+### Structures
+
+```compact
+struct NumberAnd<T> {
+  num: Uint<32>;
+  item: T
+}
+```
+
+Structures are **nominal** (same name + same fields = same type). They cannot be recursive. [[struct types](https://docs.midnight.network/compact/reference/compact-reference#structure-types)]
+
+---
+
+## 8. Ledger State (Public On-Chain Storage)
+
+Public state is declared with `ledger`. All fields initialize to their default values; the constructor can override them.
+
+```compact
+export ledger state: State;
+export ledger message: Maybe<Opaque<'string'>>;
+export ledger sequence: Counter;
+export ledger owner: Bytes<32>;
+export ledger bidders: Map<Bytes<32>, Uint<16>>;
+export sealed ledger maxBids: Uint<16>;
+```
+
+[[ledger reference](https://docs.midnight.network/compact/reference/compact-reference#declaring-and-maintaining-public-state)]
+
+### `sealed` Ledger Fields
+
+A `sealed` ledger field can only be written in the **constructor**, never in circuits. This is enforced at compile time. [[sealed ledger](https://github.com/midnightntwrk/midnight-architecture/blob/main/proposals/0009-sealed-ledger-state.md)]
+
+```compact
+export sealed ledger maxListSize: Uint<8>;
+```
+
+### Supported Ledger-State Types
+
+| Type | Description |
+|---|---|
+| `T` (any Compact type) | Simple cell, auto-wrapped as `Cell<T>` |
+| `Counter` | Incrementable/decrementable counter |
+| `Set<T>` | Unordered set |
+| `Map<K, V>` | Key-value map |
+| `List<T>` | Ordered list |
+| `MerkleTree<n, T>` | Merkle tree (1 < n ≤ 32) |
+| `HistoricMerkleTree<n, T>` | Historic Merkle tree |
+
+[[ledger state types](https://docs.midnight.network/compact/reference/compact-reference#ledger-state-types)]
+
+### Reading and Writing Ledger Fields
+
+```compact
+// Cell shorthand (write)
+F = disclose(x);
+
+// Cell shorthand (read)
+return F;
+
+// Counter shorthand
+F += 1;   // increment
+F -= 1;   // decrement
+
+// Counter method
+round.increment(1);
+
+// Map operations
+bidders.insert(pubKey, publicBid);
+bidders.member(pubKey);       // check membership
+bidders.lookup(pubKey);       // get value
+
+// Set operations
+organizers.insert(disclose(pubKey));
+organizers.member(disclose(pubKey));
+```
+
+[[ledger state types](https://docs.midnight.network/compact/reference/compact-reference#ledger-state-types)]
+
+---
+
+## 9. Circuits
+
+Circuits are the primary operational elements — equivalent to functions but compiled into ZK circuits. They **cannot be recursive** (directly or indirectly).
+
+```compact
+// Non-exported (private helper)
+circuit publicKey(sk: Bytes<32>, sequence: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "bboard:pk:"), sequence, sk]);
+}
+
+// Exported (callable entry point)
+export circuit post(newMessage: Opaque<'string'>): [] {
+  assert(state == State.VACANT, "Attempted to post to an occupied board");
+  owner = disclose(publicKey(localSecretKey(), sequence as Field as Bytes<32>));
+  message = disclose(some<Opaque<'string'>>(newMessage));
+  state = State.OCCUPIED;
+}
+```
+
+[[circuit definitions](https://docs.midnight.network/compact/reference/compact-reference#circuit-definitions)]
+
+### Pure Circuits
+
+A `pure` circuit has no side effects on ledger state:
+
+```compact
+export pure circuit getDappPubKey(_sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "silent-auction:pk:"), _sk]);
+}
+```
+
+---
+
+## 10. Constructor
+
+The constructor runs once when the contract is deployed. It initializes ledger state.
+
+```compact
+constructor(_minPrice: Uint<16>, maxBidCount: Uint<16>) {
+  const _sk = localSk();
+  const pubKey = getDappPubKey(_sk);
+  auctionOrganizer = disclose(pubKey);
+
+  maxBids = disclose(maxBidCount);
+  hiddenPrice = commitWithSk(_minPrice as Bytes<32>, _sk);
+  highestBid = 0;
+  auctionState = AuctionState.OPEN;
+}
+```
+
+[[private reserve auction](https://docs.midnight.network/examples/contracts/private-reserve-auction)]
+
+---
+
+## 11. Witnesses (Private Data)
+
+Witnesses are callback functions declared in Compact but **implemented in TypeScript**. They are the source of private data in a contract.
+
+```compact
+// Declaration in Compact
+witness localSecretKey(): Bytes<32>;
+witness divMod(num1: Uint<16>, num2: Uint<16>): [Uint<16>, Uint<16>];
+```
+
+```typescript
+// Implementation in TypeScript
+export const witnesses = {
+  localSecretKey: ({ privateState }: WitnessContext<Ledger, BBoardPrivateState>) =>
+    [privateState, privateState.secretKey],
 };
-
-// Macros and attributes
-use soroban_sdk::{
-    contracttype,    // For custom types/enums
-    contracterror,   // For custom errors
-    symbol_short,    // For short symbols (<= 9 chars)
-    log,            // For debug logging
-};
-
-// Token operations
-use soroban_sdk::token;
 ```
 
-## CRITICAL: Symbol Creation (SDK 21.0.0)
+Any value returned from a witness is considered **private data** and must be handled with `disclose()` before it can be written to the ledger, returned from an exported circuit, or passed to another contract. [[explicit disclosure](https://docs.midnight.network/compact/reference/explicit-disclosure#introduction)]
 
-```rust
-// CORRECT - Always use Symbol::new with env reference
-let sym = Symbol::new(&env, "my_symbol_name");
+---
 
-// For short symbols (9 chars or less), you can use the macro
-let short_sym = symbol_short!("short");
+## 12. Explicit Disclosure (`disclose()`)
 
-// WRONG - These do NOT exist in SDK 21
-// Symbol::from("name")  // COMPILATION ERROR
-// "name".into()         // COMPILATION ERROR
-```
+**Privacy is the default in Compact.** Storing private data in the public ledger, returning it from an exported circuit, or passing it to another contract requires explicit declaration via `disclose()`.
 
-## CRITICAL: String Creation (SDK 21.0.0)
-
-```rust
-// CORRECT - Always use String::from_str with env reference
-let s = String::from_str(&env, "hello world");
-
-// WRONG - These do NOT exist in SDK 21
-// String::from("hello")  // COMPILATION ERROR
-// "hello".into()         // COMPILATION ERROR
-```
-
-## Storage API
-
-Soroban provides three storage types:
-
-### Instance Storage (contract-level, persists with contract)
-```rust
-// Write
-env.storage().instance().set(&key, &value);
-
-// Read with default
-let val: i128 = env.storage().instance().get(&key).unwrap_or(0);
-
-// Read required (panics if missing)
-let val: Address = env.storage().instance().get(&key).unwrap();
-
-// Check existence
-let exists: bool = env.storage().instance().has(&key);
-
-// Remove
-env.storage().instance().remove(&key);
-```
-
-### Persistent Storage (user data, longer TTL)
-```rust
-env.storage().persistent().set(&key, &value);
-let val: i128 = env.storage().persistent().get(&key).unwrap_or(0);
-```
-
-### Temporary Storage (ephemeral, short TTL)
-```rust
-env.storage().temporary().set(&key, &value);
-let val: i128 = env.storage().temporary().get(&key).unwrap_or(0);
-```
-
-## Storage Keys with contracttype
-
-```rust
-#[contracttype]
-#[derive(Clone)]
-pub enum DataKey {
-    Admin,                    // Simple key
-    Counter,                  // Simple key
-    Balance(Address),         // Parameterized key
-    Allowance(Address, Address), // Multi-param key
+```compact
+// WRONG — compiler error
+export circuit setf(x: Uint<16>): [] {
+  F = x;
 }
 
-// Usage
-env.storage().instance().set(&DataKey::Admin, &admin_address);
-env.storage().persistent().set(&DataKey::Balance(user.clone()), &amount);
-```
-
-## Authentication with require_auth
-
-```rust
-// EVERY function that modifies state MUST verify authorization
-pub fn transfer(env: Env, from: Address, to: Address, amount: i128) {
-    // Verify 'from' has authorized this call
-    from.require_auth();
-    
-    // Now safe to proceed with state changes
-}
-
-// For admin-only functions
-pub fn admin_action(env: Env, caller: Address) {
-    caller.require_auth();
-    
-    let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
-    if caller != admin {
-        panic!("unauthorized");
-    }
+// CORRECT
+export circuit setf(x: Uint<16>): [] {
+  F = disclose(x);
 }
 ```
 
-## Token Operations
+The `disclose()` wrapper has **no runtime effect** — it only tells the compiler that disclosure is intentional. [[explicit disclosure reference](https://docs.midnight.network/compact/reference/compact-reference#explicit-disclosure)]
 
-```rust
-use soroban_sdk::token;
+### Best Practices for `disclose()`
 
-// Create token client
-let token_client = token::Client::new(&env, &token_address);
+- Place `disclose()` **as close to the disclosure point as possible**.
+- When disclosing a hashed value, place `disclose()` **after** the hashing step, not before it.
+- For structured values (tuples, vectors, structs), only wrap the portions that contain witness data. [[following indirect disclosures](https://docs.midnight.network/compact/reference/explicit-disclosure#following-indirect-witness-data-assignments)]
 
-// Transfer tokens (from must have called require_auth)
-token_client.transfer(&from, &to, &amount);
+---
 
-// Get balance (read-only, no auth needed)
-let balance: i128 = token_client.balance(&address);
+## 13. Hashing and Commitments
 
-// Get contract's own address for receiving tokens
-let contract_addr = env.current_contract_address();
-```
+The standard library provides four cryptographic primitives: [[hashes and commitments](https://docs.midnight.network/concepts/how-midnight-works/keeping-data-private#hashes-and-commitments)]
 
-## Custom Errors
-
-```rust
-#[contracterror]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
-#[repr(u32)]
-pub enum ContractError {
-    NotInitialized = 1,
-    AlreadyInitialized = 2,
-    Unauthorized = 3,
-    InsufficientBalance = 4,
-    InvalidAmount = 5,
-}
-
-// Usage - return Result or panic
-pub fn withdraw(env: Env, amount: i128) -> Result<(), ContractError> {
-    if amount <= 0 {
-        return Err(ContractError::InvalidAmount);
-    }
-    Ok(())
-}
-
-// Or simply panic with message
-pub fn withdraw(env: Env, amount: i128) {
-    if amount <= 0 {
-        panic!("invalid amount");
-    }
-}
-```
-
-## Events
-
-```rust
-// Publish events for important state changes
-env.events().publish(
-    (Symbol::new(&env, "transfer"),),  // Topics (tuple)
-    (from.clone(), to.clone(), amount) // Data (tuple)
-);
-
-// Multiple topics
-env.events().publish(
-    (Symbol::new(&env, "swap"), Symbol::new(&env, "executed")),
-    (user, amount_in, amount_out)
-);
-```
-
-## Vec (Vector) Operations
-
-⚠️ IMPORTANT: Vec uses push_back(), NOT push()! Custom types need #[derive(Clone)] for iteration!
-
-```rust
-use soroban_sdk::Vec;
-
-// Create empty vec
-let mut items: Vec<Address> = Vec::new(&env);
-
-// Add items - USE push_back NOT push!
-items.push_back(addr1);
-items.push_back(addr2);
-
-// Get item
-let first: Address = items.get(0).unwrap();
-
-// Get length
-let len: u32 = items.len();
-
-// Iterate (requires T: Clone for custom types!)
-for item in items.iter() {
-    // use item
-}
-
-// For custom types in Vec, you MUST derive Clone:
-#[contracttype]
-#[derive(Clone)]  // REQUIRED for .iter() to work!
-pub struct MyItem {
-    pub value: i128,
-}
-```
-
-## Map Operations
-
-⚠️ IMPORTANT: Map methods take OWNED values, NOT references! Use .clone() when needed!
-
-```rust
-use soroban_sdk::Map;
-
-// Create empty map
-let mut balances: Map<Address, i128> = Map::new(&env);
-
-// Set value - OWNED value, not reference!
-balances.set(user.clone(), 100i128);
-
-// Get value - OWNED key, not &key!
-let bal: i128 = balances.get(user.clone()).unwrap_or(0);
-
-// Check existence - OWNED key, not &key!
-let exists: bool = balances.contains_key(user.clone());
-
-// Remove - OWNED key!
-balances.remove(user.clone());
-
-// WRONG - These will NOT compile:
-// balances.get(&user)         // ERROR!
-// balances.contains_key(&key) // ERROR!
-```
-
-## Complete Contract Examples
-
-### Example 1: Simple Counter
-```rust
-#![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, Symbol};
-
-#[contracttype]
-pub enum DataKey {
-    Count,
-    Admin,
-}
-
-#[contract]
-pub struct Counter;
-
-#[contractimpl]
-impl Counter {
-    pub fn init(env: Env, admin: Address) {
-        env.storage().instance().set(&DataKey::Admin, &admin);
-        env.storage().instance().set(&DataKey::Count, &0u64);
-    }
-
-    pub fn increment(env: Env, user: Address) -> u64 {
-        user.require_auth();
-        let mut count: u64 = env.storage().instance().get(&DataKey::Count).unwrap_or(0);
-        count += 1;
-        env.storage().instance().set(&DataKey::Count, &count);
-        env.events().publish((Symbol::new(&env, "increment"),), count);
-        count
-    }
-
-    pub fn get(env: Env) -> u64 {
-        env.storage().instance().get(&DataKey::Count).unwrap_or(0)
-    }
-}
-```
-
-### Example 2: Token Vault
-```rust
-#![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, token, Address, Env, Symbol};
-
-#[contracttype]
-pub enum DataKey {
-    Token,
-    Deposit(Address),
-}
-
-#[contract]
-pub struct Vault;
-
-#[contractimpl]
-impl Vault {
-    pub fn init(env: Env, token: Address) {
-        env.storage().instance().set(&DataKey::Token, &token);
-    }
-
-    pub fn deposit(env: Env, from: Address, amount: i128) {
-        from.require_auth();
-        
-        let token_addr: Address = env.storage().instance().get(&DataKey::Token).unwrap();
-        let client = token::Client::new(&env, &token_addr);
-        client.transfer(&from, &env.current_contract_address(), &amount);
-        
-        let key = DataKey::Deposit(from.clone());
-        let current: i128 = env.storage().persistent().get(&key).unwrap_or(0);
-        env.storage().persistent().set(&key, &(current + amount));
-        
-        env.events().publish((Symbol::new(&env, "deposit"),), (from, amount));
-    }
-
-    pub fn withdraw(env: Env, to: Address, amount: i128) {
-        to.require_auth();
-        
-        let key = DataKey::Deposit(to.clone());
-        let balance: i128 = env.storage().persistent().get(&key).unwrap_or(0);
-        if balance < amount {
-            panic!("insufficient balance");
-        }
-        
-        let token_addr: Address = env.storage().instance().get(&DataKey::Token).unwrap();
-        let client = token::Client::new(&env, &token_addr);
-        client.transfer(&env.current_contract_address(), &to, &amount);
-        
-        env.storage().persistent().set(&key, &(balance - amount));
-        env.events().publish((Symbol::new(&env, "withdraw"),), (to, amount));
-    }
-
-    pub fn balance(env: Env, user: Address) -> i128 {
-        env.storage().persistent().get(&DataKey::Deposit(user)).unwrap_or(0)
-    }
-}
-```
-
-### Example 3: Fund Transfer
-```rust
-#![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, token, Address, Env, Symbol, String};
-
-#[contracttype]
-#[derive(Clone)]
-pub enum DataKey {
-    Admin,
-    TokenAddress,
-    TransferCount,
-}
-
-#[contract]
-pub struct FundTransfer;
-
-#[contractimpl]
-impl FundTransfer {
-    /// Initialize the contract
-    pub fn initialize(env: Env, admin: Address, token_address: Address) {
-        if env.storage().instance().has(&DataKey::Admin) {
-            panic!("already initialized");
-        }
-        env.storage().instance().set(&DataKey::Admin, &admin);
-        env.storage().instance().set(&DataKey::TokenAddress, &token_address);
-        env.storage().instance().set(&DataKey::TransferCount, &0u64);
-    }
-
-    /// Transfer funds from sender to recipient
-    pub fn transfer(env: Env, from: Address, to: Address, amount: i128) -> u64 {
-        from.require_auth();
-        
-        if amount <= 0 {
-            panic!("amount must be positive");
-        }
-        
-        let token_addr: Address = env.storage().instance().get(&DataKey::TokenAddress).unwrap();
-        let token = token::Client::new(&env, &token_addr);
-        
-        // Execute transfer
-        token.transfer(&from, &to, &amount);
-        
-        // Increment transfer count
-        let mut count: u64 = env.storage().instance().get(&DataKey::TransferCount).unwrap_or(0);
-        count += 1;
-        env.storage().instance().set(&DataKey::TransferCount, &count);
-        
-        // Emit event
-        env.events().publish(
-            (Symbol::new(&env, "transfer"),),
-            (from, to, amount, count)
-        );
-        
-        count
-    }
-
-    /// Get transfer count
-    pub fn get_transfer_count(env: Env) -> u64 {
-        env.storage().instance().get(&DataKey::TransferCount).unwrap_or(0)
-    }
-
-    /// Get token address
-    pub fn get_token(env: Env) -> Address {
-        env.storage().instance().get(&DataKey::TokenAddress).unwrap()
-    }
-}
-```
-
-### Example 4: Escrow Contract
-```rust
-#![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, token, Address, Env, Symbol};
-
-#[contracttype]
-#[derive(Clone)]
-pub enum DataKey {
-    Escrow(u64),
-    EscrowCount,
-}
-
-#[contracttype]
-#[derive(Clone)]
-pub struct EscrowData {
-    pub depositor: Address,
-    pub beneficiary: Address,
-    pub token: Address,
-    pub amount: i128,
-    pub released: bool,
-}
-
-#[contract]
-pub struct Escrow;
-
-#[contractimpl]
-impl Escrow {
-    /// Create a new escrow
-    pub fn create(
-        env: Env,
-        depositor: Address,
-        beneficiary: Address,
-        token_addr: Address,
-        amount: i128,
-    ) -> u64 {
-        depositor.require_auth();
-        
-        // Transfer tokens to contract
-        let token = token::Client::new(&env, &token_addr);
-        token.transfer(&depositor, &env.current_contract_address(), &amount);
-        
-        // Get next escrow ID
-        let mut count: u64 = env.storage().instance().get(&DataKey::EscrowCount).unwrap_or(0);
-        count += 1;
-        
-        // Store escrow data
-        let escrow = EscrowData {
-            depositor: depositor.clone(),
-            beneficiary: beneficiary.clone(),
-            token: token_addr,
-            amount,
-            released: false,
-        };
-        
-        env.storage().persistent().set(&DataKey::Escrow(count), &escrow);
-        env.storage().instance().set(&DataKey::EscrowCount, &count);
-        
-        env.events().publish((Symbol::new(&env, "escrow_created"),), count);
-        count
-    }
-
-    /// Release escrow to beneficiary
-    pub fn release(env: Env, escrow_id: u64, releaser: Address) {
-        releaser.require_auth();
-        
-        let key = DataKey::Escrow(escrow_id);
-        let mut escrow: EscrowData = env.storage().persistent().get(&key).unwrap();
-        
-        if escrow.released {
-            panic!("already released");
-        }
-        if releaser != escrow.depositor {
-            panic!("only depositor can release");
-        }
-        
-        // Transfer to beneficiary
-        let token = token::Client::new(&env, &escrow.token);
-        token.transfer(&env.current_contract_address(), &escrow.beneficiary, &escrow.amount);
-        
-        escrow.released = true;
-        env.storage().persistent().set(&key, &escrow);
-        
-        env.events().publish((Symbol::new(&env, "escrow_released"),), escrow_id);
-    }
-
-    /// Get escrow details
-    pub fn get_escrow(env: Env, escrow_id: u64) -> EscrowData {
-        env.storage().persistent().get(&DataKey::Escrow(escrow_id)).unwrap()
-    }
-}
-```
-
-## Common Patterns
-
-### Initialization Guard
-```rust
-pub fn initialize(env: Env, admin: Address) {
-    if env.storage().instance().has(&DataKey::Admin) {
-        panic!("already initialized");
-    }
-    env.storage().instance().set(&DataKey::Admin, &admin);
-}
-```
-
-### Admin Check
-```rust
-fn require_admin(env: &Env, caller: &Address) {
-    let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
-    if caller != &admin {
-        panic!("unauthorized: admin only");
-    }
-}
-```
-
-### Safe Math
-```rust
-// Use checked operations to prevent overflow
-let new_balance = balance.checked_add(amount).expect("overflow");
-let new_balance = balance.checked_sub(amount).expect("underflow");
-```
-
-## Type Reference
-
-| Rust Type | Use For |
-|-----------|---------|
-| `i128` | Token amounts, balances |
-| `u64` | Counters, IDs, timestamps |
-| `u32` | Small counters, indices |
-| `bool` | Flags |
-| `Address` | Wallet/contract addresses |
-| `String` | Text data |
-| `Symbol` | Event names, map keys |
-| `Vec<T>` | Lists |
-| `Map<K, V>` | Key-value storage |
-| `Bytes` | Raw byte data |
-| `BytesN<N>` | Fixed-size bytes (e.g., hashes) |
-
-## Stellar Network Info
-
-- Testnet RPC: https://soroban-testnet.stellar.org
-- Mainnet RPC: https://mainnet.sorobanrpc.com
-- Mainnet Horizon: https://horizon.stellar.org
+| Function | Output | Persistent? | Disclosure-safe? |
+|---|---|---|---|
+| `transientHash
