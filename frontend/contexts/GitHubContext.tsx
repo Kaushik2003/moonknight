@@ -205,7 +205,7 @@ export function GitHubProvider({ children }: { children: React.ReactNode }) {
             branch: connectedRepo.branch,
             commitMessage:
               commitMessage ||
-              `Update from Stacy IDE - ${new Date().toISOString()}`,
+              `Update from MoonKnight - ${new Date().toISOString()}`,
             files,
           }),
         });

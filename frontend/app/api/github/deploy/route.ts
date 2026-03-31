@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         name: repoName,
         private: false, // Default to public for now
-        description: "Stellar Smart Contract Project created with Stacy IDE",
+        description: "Midnight Smart Contract Project created with MoonKnight",
       }),
     });
 

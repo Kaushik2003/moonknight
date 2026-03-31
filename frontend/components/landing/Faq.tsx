@@ -10,24 +10,24 @@ type FAQItem = {
 
 const faqs: FAQItem[] = [
     {
-        question: "Do I need to install Rust or the Stellar CLI?",
+        question: "Do I need to install Rust or the Midnight CLI?",
         answer:
-            "No. Stacy is a complete zero-setup environment that handles Rust, Soroban CLI, and all dependencies in the cloud.",
+            "No. MoonKnight is a complete zero-setup environment that handles Rust, Midnight SDK, and all dependencies in the cloud.",
     },
     {
-        question: "How does the AI know about the latest Soroban updates?",
+        question: "How does MoonKnight handle private transactions?",
         answer:
-            "Stella RAG is trained on official and up-to-date Stellar documentation, ensuring accurate and current guidance.",
+            "MoonKnight leverages Midnight's ZK-powered privacy layer to automatically generate shielded and unshielded contract variants, ensuring your transactions remain confidential when needed.",
     },
     {
-        question: "Is my code secure?",
+        question: "Is my code secure and private?",
         answer:
-            "Yes. Every project runs in its own isolated Docker sandbox. You can safely compile, test, and push directly to your GitHub repository.",
+            "Yes. Every project runs in its own isolated Docker sandbox with full privacy controls. MoonKnight supports shielded wallets and ZK proofs, so your contracts can maintain privacy on-chain.",
     },
     {
-        question: "Can I generate client-side code?",
+        question: "Can I deploy to Midnight Preprod or Mainnet directly?",
         answer:
-            "Absolutely. Stacy automatically generates TypeScript bindings so you can integrate contracts into your frontend immediately.",
+            "Absolutely. MoonKnight integrates with Lace wallet and generates all necessary Midnight contract bindings. Deploy to Preprod for testing, then move to Mainnet with confidence.",
     },
 ];
 

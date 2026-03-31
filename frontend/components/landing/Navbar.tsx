@@ -98,8 +98,8 @@ export function Navbar() {
                     {/* Logo Section */}
                     <Link href="/" className="flex items-center gap-2">
                         <Image
-                            src="/logo.webp"
-                            alt="Stacy Logo"
+                            src="/logoremove.png"
+                            alt="MoonKnight Logo"
                             width={32}
                             height={32}
                             className="h-8 w-8 object-contain"

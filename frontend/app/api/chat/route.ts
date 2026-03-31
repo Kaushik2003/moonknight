@@ -496,7 +496,7 @@ ${lastUserMessage}`;
           baseURL: 'https://openrouter.ai/api/v1',
           headers: {
             'HTTP-Referer': 'http://localhost',
-            'X-Title': 'Stacy IDE',
+            'X-Title': 'MoonKnight',
           },
         });
         aiModel = openrouter.chat(resolvedModelName);

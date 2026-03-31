@@ -194,7 +194,7 @@ codegen-units = 1
 lto = true
 `,
   },
-  terminalLogs: ["Stacy IDE initialized", "Connected to Soroban SDK v21.0.0"],
+  terminalLogs: ["MoonKnight IDE initialized", "Connected to Midnight SDK"],
   terminalStatus: "idle",
   ui: {
     isFileExplorerOpen: true,
@@ -218,7 +218,7 @@ export default function Home() {
             Stellar App
           </h1>
           <p className="text-gray-400">
-            Built with Stacy IDE - Your AI-powered Stellar development environment
+            Built with MoonKnight - Your AI-powered Midnight development environment
           </p>
         </div>
 
@@ -249,7 +249,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Stellar App",
-  description: "Built with Stacy IDE",
+  description: "Built with MoonKnight",
 };
 
 export default function RootLayout({

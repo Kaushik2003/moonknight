@@ -78,7 +78,7 @@ const steps = [
   {
     Mockup: Step1Mockup,
     title: "Describe Your Intent",
-    description: "Tell Stacy what you want to build. From simple tokens to complex DeFi protocols.",
+    description: "Tell MoonKnight what you want to build. From simple tokens to complex Zk protocols.",
     step: "STEP 1"
   },
   {

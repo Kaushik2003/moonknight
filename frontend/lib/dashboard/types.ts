@@ -1,4 +1,4 @@
-// Database types for Stacy IDE analytics
+// Database types for MoonKnight analytics
 export type AnalyticsEvent = {
     id: string;
     event_name: string;

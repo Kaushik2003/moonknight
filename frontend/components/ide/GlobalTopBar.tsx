@@ -66,8 +66,8 @@ export function GlobalTopBar({
         href="/"
         className="flex items-center gap-2 text-zinc-100 font-bold tracking-tight w-40 hover:opacity-90 transition-opacity"
       >
-        <img src="/logo.png" alt="Stacy" className="w-10 h-10 rounded-md" />
-        <span className="text-sm">Stacy</span>
+        <img src="/logoremove.png" alt="MoonKnight" className="w-10 h-10 rounded-md" />
+        <span className="text-sm">MoonKnight</span>
       </Link>
 
       {/* Center - Mode Toggle */}

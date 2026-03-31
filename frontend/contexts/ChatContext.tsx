@@ -39,7 +39,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     {
       id: 'welcome',
       role: 'assistant' as const,
-      content: `Welcome to MoonKnight, I'm your AI assistant. I'm ready to help you build Midnight smart contracts and frontends.`,
+      content: `Welcome to MoonKnight, I'm your AI assistant. I'm ready to help you build Compact smart contracts and frontends.`,
       timestamp: Date.now(),
     },
   ]);
@@ -63,7 +63,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const welcomeMessage: ChatMessage = {
       id: 'welcome',
       role: 'assistant',
-      content: `Welcome to MoonKnight, I'm your AI assistant. I'm ready to help you build Midnight smart contracts and frontends.`,
+      content: `Welcome to MoonKnight, I'm your AI assistant. I'm ready to help you build Compact smart contracts and frontends.`,
       timestamp: Date.now(),
     };
     setMessagesState([welcomeMessage]);

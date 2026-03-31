@@ -898,7 +898,7 @@ export function ChatPanel({
                         msg.role === "user" && "justify-end"
                       )}>
                         <span className="text-xs font-semibold text-zinc-400">
-                          {msg.role === "assistant" ? "Stella" : "You"}
+                          {msg.role === "assistant" ? "MoonKnight" : "You"}
                         </span>
                         {msg.model && (
                           <span className="text-[10px] text-zinc-600">

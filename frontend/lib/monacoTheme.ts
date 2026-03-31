@@ -1,5 +1,5 @@
-export const MONACO_THEME_STORAGE_KEY = "stacy.monaco-theme";
-export const MONACO_THEME_CHANGE_EVENT = "stacy:monaco-theme-change";
+export const MONACO_THEME_STORAGE_KEY = "moonknight.monaco-theme";
+export const MONACO_THEME_CHANGE_EVENT = "moonknight:monaco-theme-change";
 
 import draculaTheme from "@/lib/monacoThemes/dracula.json";
 import githubDarkTheme from "@/lib/monacoThemes/github-dark.json";

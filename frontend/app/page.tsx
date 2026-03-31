@@ -4,7 +4,7 @@ import { IntentBox } from "@/components/landing/IntentBox";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { Logos } from "@/components/landing/Marquee";
 import ScrollRevealGallery from "@/components/landing/ScrollRevealGallery";
-import StacyBentoGrid from "@/components/landing/BentoGrid";
+import MoonKnightBentoGrid from "@/components/landing/BentoGrid";
 import FAQ from "@/components/landing/Faq";
 import { Footer } from "@/components/landing/Footer";
 import { ReactLenis } from 'lenis/react';
@@ -22,7 +22,7 @@ export default function LandingPage() {
         </div>
         <Logos />
         {/* <ScrollRevealGallery /> */}
-        <StacyBentoGrid />
+        <MoonKnightBentoGrid />
         <HowItWorks />
         <FAQ />
         <Footer />

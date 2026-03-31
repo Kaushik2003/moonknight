@@ -63,7 +63,7 @@ export function BuilderPassButton({
         key: keyId,
         amount,
         currency,
-        name: "Stacy IDE",
+        name: "MoonKnight",
         description: "Builder Pass — 24h AI Access",
         order_id: orderId,
         theme: { color: "#7c3aed" },

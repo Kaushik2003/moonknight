@@ -112,7 +112,7 @@ export function GitHubButton({
             git add .
 
             # Commit
-            git commit -m "Initial deploy from Stacy" || true
+            git commit -m "Initial deploy from MoonKnight" || true
 
             # Ensure main branch
             git branch -M main

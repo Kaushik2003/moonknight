@@ -11,7 +11,7 @@ const TerminalGraphic = () => {
       <div className="flex-none border-2 border-black p-2 rounded-lg bg-white/50 flex flex-col justify-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
         <div className="flex items-center gap-2 px-1">
           <span className="text-[#caa7ff] font-bold">{">"}</span>
-          <span className="text-neutral-600">cat src/lib.rs</span>
+          <span className="text-neutral-600">src/lib.compact</span>
         </div>
         {/* Progress Bar */}
         <div className="h-3 w-full bg-transparent rounded-full overflow-hidden border-2 border-black p-[1px] opacity-60">
@@ -30,7 +30,7 @@ const TerminalGraphic = () => {
 
         <div className="space-y-1 pt-1 opacity-95 text-xs">
           <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-            <span className="text-purple-600">use</span> <span className="text-black">stacy_sdk::contract;</span>
+            <span className="text-purple-600">use</span> <span className="text-black">midnight_contract::contract;</span>
           </motion.div>
 
           <div className="pt-2">
@@ -347,7 +347,7 @@ const Card = ({
 
 /* ---------- Main Bento Grid ---------- */
 
-export default function StacyBentoGrid() {
+export default function MoonKnightBentoGrid() {
   return (
     <section className="min-h-screen flex flex-col items-center justify-center px-4 py-24 md:px-8 md:pt-40 md:pb-24 border-t border-white/10 bg-[radial-gradient(125%_120%_at_60%_0%,#3d1d57_0%,#1a1126_38%,#09070f_100%)]">
       <div className="max-w-[90%] mx-auto w-full">
@@ -360,7 +360,7 @@ export default function StacyBentoGrid() {
         {/* 1. LEFT COLUMN - TALL (SIMPLE AND POWERFUL) */}
         <Card
           header="SIMPLE AND POWERFUL"
-          description="From notebook to production, prototype, iterate, and deploy your application with Stacy."
+          description="From notebook to production, prototype, iterate, and deploy your Midnight application with MoonKnight."
           className="md:row-span-2"
           delay={0.1}
         >
@@ -370,7 +370,7 @@ export default function StacyBentoGrid() {
         {/* 2. MIDDLE TOP - FULL FEATURES PACKED */}
         <Card
           header="FULL FEATURES PACKED"
-          description="Everything you need for Soroban development: Compilation, Testing, Deployment."
+          description="Everything you need for Compact development: Compilation, Testing, Deployment."
           delay={0.2}
         >
           <LayersGraphic />
@@ -379,7 +379,7 @@ export default function StacyBentoGrid() {
         {/* 3. RIGHT TOP - SPEAKS YOUR LANGUAGE */}
         <Card
           header="SPEAKS YOUR LANGUAGE"
-          description="Clients for JS, Rust, Python, and more. Auto-generated bindings."
+          description="One click generated bindings."
           delay={0.3}
         >
           <LanguagesGraphic />

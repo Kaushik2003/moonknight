@@ -44,7 +44,7 @@ export default function DashboardLoginPage() {
             <Card className="w-full max-w-md bg-card/50 backdrop-blur border border-border/50">
                 <div className="p-8">
                     <div className="mb-8">
-                        <h1 className="text-2xl font-bold text-foreground">Stacy IDE Analytics</h1>
+                        <h1 className="text-2xl font-bold text-foreground">MoonKnight Analytics</h1>
                         <p className="text-muted-foreground mt-2">Sign in to your dashboard</p>
                     </div>
 

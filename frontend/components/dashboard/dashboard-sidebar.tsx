@@ -96,7 +96,7 @@ export function DashboardSidebar() {
         <aside className="w-64 bg-sidebar border-r border-sidebar-border min-h-screen flex flex-col overflow-y-auto">
             {/* Header */}
             <div className="p-6 border-b border-sidebar-border">
-                <h1 className="text-xl font-bold text-sidebar-foreground">Stacy IDE</h1>
+                <h1 className="text-xl font-bold text-sidebar-foreground">MoonKnight</h1>
                 <p className="text-xs text-muted-foreground mt-1">Analytics Dashboard</p>
             </div>
 
