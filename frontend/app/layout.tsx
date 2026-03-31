@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description: 'Build Web3 dapps with dual-mode IDE for smart contracts and frontend',
   generator: 'MoonKnight',
   icons: {
-    icon: '/dhak.png',
+    icon: '/logoremove.png',
     shortcut: '/dhak.png',
     apple: '/dhak.png',
   },
