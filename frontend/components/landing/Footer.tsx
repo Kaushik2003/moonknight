@@ -197,7 +197,7 @@ const Footer = () => {
 
                     <div className="w-full h-full flex justify-center items-end pointer-events-none select-none leading-none pb-0 pt-10">
                         <h1 ref={ref} className={`${font.className} text-[18vw] md:text-[20vw] text-[#87E64B] leading-[0.75] mix-blend-normal tracking-wide uppercase whitespace-nowrap drop-shadow-[12px_12px_0px_rgba(0,0,0,1)]`} style={{ WebkitTextStroke: '3px black' }}>
-                            {['M', 'o', 'o', 'n', 'K', 'n', 'i', 'g', 'h', 't'].map((letter, i) => (
+                            {['MoonKnight'].map((letter, i) => (
                                 <motion.span
                                     key={i}
                                     custom={i}
