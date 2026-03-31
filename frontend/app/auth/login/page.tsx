@@ -1,106 +1,32 @@
 "use client";
 
 import { LoginForm } from "@/components/login-form";
-import { LiquidMetalButton } from "@/components/liquid-metal-button";
-import { cn } from "@/lib/utils";
-import { useWallet } from "@/hooks/useWallet";
-import { useUser } from "@clerk/nextjs";
 
 export default function Page() {
-  const { address, status, connect, disconnect, error: walletError } = useWallet();
-  const { isSignedIn } = useUser();
-
-  const isConnected = status === "connected" && !!address;
-  const isConnecting = status === "connecting";
-
-  const formatAddress = (addr: string) => `${addr.slice(0, 4)}...${addr.slice(-4)}`;
-  const walletLabel = isConnecting
-    ? "Connecting..."
-    : isConnected
-    ? `Connected: ${formatAddress(address!)}`
-    : "Connect wallet";
-
-  const handleWalletClick = async () => {
-    if (isConnected) {
-      disconnect();
-      return;
-    }
-    await connect();
-  };
-
   return (
-    <div className="flex min-h-svh w-full items-center justify-center bg-gradient-to-b from-background via-background/95 to-background p-6 md:p-10">
-      <div className="w-full max-w-2xl space-y-6">
-        {/* Step 1 — Wallet (optional) */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl ring-1 ring-white/10 backdrop-blur-md">
-          <div className="mb-4 flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
-                Step 1 &middot; Optional
-              </p>
-              <h2 className="text-xl font-semibold text-white">Connect your wallet</h2>
-              <p className="text-sm text-white/70">
-                Optionally link your Lace wallet. You can always do this later from the dashboard.
-              </p>
-            </div>
-            <span
-              className={cn(
-                "rounded-full px-3 py-1 text-xs font-semibold capitalize",
-                status === "connected"
-                  ? "bg-emerald-500/20 text-emerald-200"
-                  : status === "connecting"
-                  ? "bg-amber-400/20 text-amber-100"
-                  : status === "error"
-                  ? "bg-red-500/20 text-red-100"
-                  : "bg-white/10 text-white/80"
-              )}
-            >
-              {isConnected ? "connected" : "optional"}
-            </span>
+    <div className="relative flex min-h-svh w-full items-center justify-center overflow-hidden bg-[radial-gradient(120%_120%_at_50%_0%,#1a1030_0%,#0d0815_45%,#07050c_100%)] p-6 md:p-10">
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(120,96,255,0.2)_0%,rgba(88,45,180,0.12)_28%,rgba(24,14,48,0)_70%)] blur-3xl" />
+      <div className="pointer-events-none absolute left-[42%] top-[44%] h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(106,189,255,0.12)_0%,rgba(26,64,148,0)_65%)] blur-2xl" />
+
+      <div className="relative w-full max-w-3xl rounded-3xl border border-white/12 bg-[linear-gradient(150deg,rgba(255,255,255,0.09)_0%,rgba(255,255,255,0.03)_35%,rgba(255,255,255,0.02)_100%)] p-8 shadow-[0_24px_90px_rgba(0,0,0,0.55)] ring-1 ring-purple-300/15 backdrop-blur-2xl md:p-12">
+        <div className="pointer-events-none absolute inset-0 rounded-3xl bg-[linear-gradient(120deg,rgba(170,140,255,0.14)_0%,rgba(95,63,168,0.04)_30%,rgba(255,255,255,0)_65%)]" />
+
+        <div className="relative mx-auto w-full max-w-xl space-y-7 text-center">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/55">
+              MoonKnight Access
+            </p>
+            <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+              Sign in to start building private dApps
+            </h1>
+            <p className="mx-auto max-w-lg text-sm text-white/65 md:text-base">
+              Continue to MoonKnight and launch secure Midnight workflows in a streamlined AI-native workspace.
+            </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4">
-            <LiquidMetalButton label={walletLabel} onClick={handleWalletClick} width={210} />
-            {isConnected && (
-              <button
-                type="button"
-                onClick={disconnect}
-                className="text-sm font-medium text-white/80 underline-offset-4 hover:text-white hover:underline"
-              >
-                Disconnect
-              </button>
-            )}
+          <div className="flex justify-center rounded-2xl border border-white/10 bg-black/25 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_18px_40px_rgba(0,0,0,0.45)] md:p-6">
+            <LoginForm className="w-full max-w-md" />
           </div>
-
-          {walletError && (
-            <p className="mt-3 text-sm text-red-200">
-              {walletError}
-            </p>
-          )}
-          {address && (
-            <p className="mt-2 text-xs text-white/60">
-              Active wallet: {address}
-            </p>
-          )}
-        </div>
-
-        {/* Step 2 — Google login (required, always accessible) */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl ring-1 ring-white/10 backdrop-blur-md">
-          <div className="mb-4 space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
-              Step 2 &middot; Required
-            </p>
-            <h2 className="text-xl font-semibold text-white">Continue with Google</h2>
-            <p className="text-sm text-white/70">
-              Sign in with Google to finish onboarding and get access to Generate.
-            </p>
-            {isSignedIn && (
-              <p className="text-xs text-emerald-200">
-                You&apos;re already signed in.
-              </p>
-            )}
-          </div>
-          <LoginForm />
         </div>
       </div>
     </div>
